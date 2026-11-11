@@ -1,155 +1,103 @@
-# BBVA México · Fondos de Inversión (Anaquel de Rendimientos)
+# BBVA México · Fondos de Inversión (Home Assistant App)
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg)](https://fastapi.tiangolo.com)
 [![SQLite WAL](https://img.shields.io/badge/SQLite-WAL%20Hardened-003B57.svg)](https://sqlite.org)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Custom%20Integration-41BDF5.svg)](https://www.home-assistant.io/)
-[![HACS Ready](https://img.shields.io/badge/HACS-Custom%20Component-orange.svg)](https://hacs.xyz/)
+[![Home Assistant Add-on](https://img.shields.io/badge/Home%20Assistant-App%20%2F%20Add--on-41BDF5.svg)](https://www.home-assistant.io/)
+[![Ingress Ready](https://img.shields.io/badge/Home%20Assistant-Ingress%20Sidebar-blueviolet.svg)](https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/)
 
-Servicio integral de extracción, base de datos histórica, API RESTful y dashboard financiero para consultar y graficar los **"Anaquel con Rendimientos Históricos del Día Actual"** de los fondos de inversión de BBVA México. Diseñado y preparado para su ejecución autónoma y su instalación directa en **Home Assistant**.
+Aplicación oficial para Home Assistant y microservicio autónomo que descarga y procesa diariamente los **"Anaquel con Rendimientos Históricos del Día Actual"** de los fondos de inversión de BBVA México. 
 
----
-
-## 🏛️ Arquitectura del Sistema (Delegada vía `/skills-manager`)
-
-El proyecto fue orquestado utilizando la metodología modular de **Skills Manager**, delegando responsabilidades a skills especializadas:
-
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│                        BBVA Portal (PDF Oficial)                       │
-│        "Anaquel con Rendimientos Históricos del Día Actual"            │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                        Scraper & Parser Engine                         │
-│  [app/scraper.py] Descarga resiliente HTTP con fallbacks               │
-│  [app/parser.py]  Extracción pypdf: Ticker, Serie, Rendimientos, Fecha │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│             Base de Datos SQLite Hardened (database-architect)         │
-│  [app/database.py] PRAGMAs: WAL, Foreign Keys, Busy Timeout 5000ms    │
-│  [app/repository.py] Upserts idempotentes en funds, series, history    │
-└──────────────┬──────────────────────────────────────────┬──────────────┘
-               │                                          │
-               ▼                                          ▼
-┌──────────────────────────────┐        ┌────────────────────────────────┐
-│   Backend RESTful (backend)  │        │   Home Assistant Integration   │
-│  - FastAPI con OpenAPI 3.1   │        │   (homeassistant-integrations) │
-│  - Standard Response Envelope│        │  - custom_components/bbva_fondos│
-│  - docs/API_CONTRACT.md      │        │  - DataUpdateCoordinator       │
-│  - UI Dashboard (ui-ux)      │        │  - UI ConfigFlow & OptionsFlow │
-│  - Gráficas Chart.js         │        │  - Entidades de Moneda y %     │
-└──────────────────────────────┘        └────────────────────────────────┘
-```
+Extrae y almacena **todas las columnas oficiales** en una base de datos histórica SQLite y proporciona una interfaz web financiera accesible directamente desde la barra lateral de Home Assistant (Ingress).
 
 ---
 
-## 🚀 Inicio Rápido Local
+## ✨ Características Principales
 
-### Requisitos Previos
-- Python 3.12+ (o Docker)
-- Entorno virtual
+1. **Extracción Completa de Todas las Columnas Oficiales**:
+   - `Fondo` (Ticker ej. `BBVALIQ`, `BBVAGUB`, `BBVAPZO`)
+   - `Serie` (`B`, `C`, `P`, `PV`, `UHN`, `PF1`, etc.)
+   - `Segmento` (`Personas Físicas`, `Personas Morales`, `Colaboradores BBVA`)
+   - `Categoría` (`Fondos de Deuda`, `Fondos de Liquidez en Divisas`, `Fondos de Estrategias`, etc.)
+   - `Mínimo de Inversión` (MXN)
+   - `Calificación` (`AAA/1`, `AAA/2`, `AA/3`, `AA/4`, etc.)
+   - `Rendimiento Diario` (%)
+   - `Rendimiento Semanal` (%)
+   - `Rendimiento Acumulado Mes` (%)
+   - `Rendimiento Acumulado Año` (%)
+   - `Rendimiento 1 Año` (%)
+   - `Rendimiento 2 Años` (%)
+   - `Precio Actual por Título` (MXN)
+   - `Fecha de Reporte` (`YYYY-MM-DD`)
 
-### 1. Clonar e Instalar Dependencias
+2. **Rastreo Especializado para Deuda de Personas Físicas**:
+   - Filtro dedicado en un clic: **⭐ Deuda P. Físicas**, que agrupa todas las categorías de deuda (corto plazo, liquidez diaria, mediano plazo, gubernamentales, corporativas).
+
+3. **App Nativa para Home Assistant (Add-on con Ingress)**:
+   - Se instala directamente desde la **Tienda de Complementos** de Home Assistant.
+   - Aparece en el menú lateral de Home Assistant sin necesidad de extensiones externas ni HACS.
+   - Almacena su base de datos de manera persistente en `/data/bbva_fondos.db`.
+
+4. **API REST con Contrato Formal OpenAPI 3.1**:
+   - Expone endpoints estándar documentados en [`docs/API_CONTRACT.md`](./docs/API_CONTRACT.md) y [`openapi.json`](./openapi.json).
+   - Compatible con cualquier otro servicio, script en Python o automatización que requiera consultar precios o rendimientos.
+
+---
+
+## 📱 Instalación en Home Assistant como App (Add-on)
+
+1. En tu Home Assistant, dirígete a:
+   **Ajustes** $\rightarrow$ **Complementos** $\rightarrow$ **Tienda de Complementos** (botón inferior derecho).
+2. Haz clic en el menú de tres puntos superior derecho $\rightarrow$ **Repositorios**.
+3. Añade la URL del repositorio:
+   ```text
+   https://github.com/Moztoo/ha_fondosInversion
+   ```
+4. Recarga la página y busca en la lista el complemento **BBVA Fondos de Inversión**.
+5. Haz clic en **Instalar**.
+6. Activa las opciones:
+   - ✅ **Iniciar al arrancar**
+   - ✅ **Vigilar**
+   - ✅ **Mostrar en la barra lateral**
+7. Haz clic en **Iniciar** y luego en **Abrir la interfaz web** o accede directamente desde el icono en la barra lateral de Home Assistant.
+
+---
+
+## 💻 Ejecución Local Standalone
+
+Si deseas ejecutarlo de forma independiente en tu computadora o servidor:
+
 ```bash
 cd /home/ricardom/ha_fondosInversion
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-### 2. Iniciar el Servicio
-```bash
 python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8088 --reload
 ```
 
-El servicio estará disponible en:
-- **Dashboard Financiero**: [http://localhost:8088/](http://localhost:8088/)
-- **Documentación Interactiva (Swagger)**: [http://localhost:8088/docs](http://localhost:8088/docs)
+- **Dashboard Web**: [http://localhost:8088/](http://localhost:8088/)
+- **Documentación Swagger**: [http://localhost:8088/docs](http://localhost:8088/docs)
 - **Contrato OpenAPI**: [http://localhost:8088/api/v1/contract](http://localhost:8088/api/v1/contract)
 
-### 3. Sincronizar el PDF Oficial de BBVA
-Al abrir el dashboard, presiona el botón **"Sincronizar PDF"** o ejecuta desde terminal:
-```bash
-curl -X POST http://localhost:8088/api/v1/sync
-```
-
 ---
 
-## 🏠 Instalación en Home Assistant
+## 📡 Endpoints de la API REST
 
-La integración está empaquetada siguiendo los estándares de **Home Assistant Community Store (HACS)** y el **Integration Quality Scale**.
-
-### Opción A: Vía HACS (Recomendado)
-1. En Home Assistant, abre **HACS** $\rightarrow$ **Integraciones** $\rightarrow$ Menú superior de 3 puntos $\rightarrow$ **Repositorios personalizados**.
-2. Añade este repositorio local o URL de GitHub con categoría **Integración**.
-3. Haz clic en **Descargar** y reinicia Home Assistant.
-
-### Opción B: Copia Directa a tu Servidor Home Assistant
-Copia la carpeta `custom_components/bbva_fondos` a la carpeta `config/custom_components/` de tu servidor Home Assistant:
-```bash
-# Ejemplo si tu Home Assistant está en la misma red local
-scp -r custom_components/bbva_fondos ricardom@192.168.1.20:/home/homeassistant/.homeassistant/custom_components/
-```
-
-### Configuración en la UI de Home Assistant
-1. Ve a **Ajustes** $\rightarrow$ **Dispositivos y Servicios** $\rightarrow$ **Añadir Integración**.
-2. Busca **BBVA México Fondos de Inversión**.
-3. Selecciona tu modo preferido:
-   - **Descarga directa de PDF (Recomendado, autónomo)**: Home Assistant descarga y parsea el PDF de forma autónoma sin necesidad de servicios externos.
-   - **Conectar a servicio REST**: Se conecta a la API local (`http://localhost:8088`).
-4. Indica los fondos a monitorear (ej. `BBVALIQ:B, BBVARV:B, BBVAGUB:C`).
-
-### Tarjetas Lovelace Listas para Usar
-Revisa [`docs/lovelace_dashboard.yaml`](./docs/lovelace_dashboard.yaml) para copiar y pegar tarjetas prediseñadas con gráficos históricos, precios actuales y botones de sincronización manual.
-
----
-
-## 📡 Contrato de la Interfaz (API Contract)
-
-La descripción formal de la interfaz se encuentra documentada a detalle en [`docs/API_CONTRACT.md`](./docs/API_CONTRACT.md) y en la especificación [`openapi.json`](./openapi.json).
-
-### Resumen de Endpoints:
 | Método | Endpoint | Descripción |
 | :--- | :--- | :--- |
-| `GET` | `/api/v1/health` | Estado del servicio, versión y conteo de fondos y series. |
-| `GET` | `/api/v1/filters` | Segmentos de clientes y categorías disponibles. |
-| `GET` | `/api/v1/funds` | Lista paginada de fondos con filtros por segmento, categoría y texto. |
-| `GET` | `/api/v1/funds/{ticker}` | Detalle de todas las series de un fondo (mínimos, calificaciones, último precio). |
-| `GET` | `/api/v1/funds/{ticker}/{series}` | Detalle individual de una serie específica. |
-| `GET` | `/api/v1/funds/{ticker}/{series}/history` | Historial de precios y rendimientos en serie de tiempo. |
-| `POST`| `/api/v1/sync` | Dispara la descarga del PDF y actualización de la base de datos. |
+| `GET` | `/api/v1/series` | Lista completa de series con **todas las columnas** (precios, mínimos, calificaciones, rendimientos). |
+| `GET` | `/api/v1/funds` | Lista agrupada por fondos. |
+| `GET` | `/api/v1/funds/{ticker}/{series}/history` | Historial de precios y rendimientos para graficar o analizar. |
+| `GET` | `/api/v1/filters` | Lista de categorías y segmentos disponibles. |
+| `GET` | `/api/v1/health` | Estado del servicio y estadísticas de la base de datos. |
+| `POST`| `/api/v1/sync` | Forzar la descarga y procesamiento del último PDF oficial. |
+
+Consulta [`docs/API_CONTRACT.md`](./docs/API_CONTRACT.md) para ver la especificación completa y ejemplos en cURL y Python.
 
 ---
 
 ## 🐳 Despliegue con Docker
 
-El repositorio incluye un contenedor optimizado multi-stage y `docker-compose.yml`:
-
 ```bash
 docker compose up -d --build
 ```
-
-Comprueba el estado:
-```bash
-docker compose ps
-curl http://localhost:8088/api/v1/health
-```
-
----
-
-## 🧪 Pruebas Automatizadas
-
-El proyecto cuenta con una suite completa de pruebas unitarias y de integración con `pytest`:
-```bash
-pytest -v
-```
-
-Resultado:
-- `test_parser_with_sample_pdf`: Extracción precisa de fechas, calificaciones, porcentajes y precios de todas las series.
-- `test_sqlite_pragmas_and_schema`: Verificación de WAL mode, claves foráneas e índices.
-- `test_repository_upsert_and_query`: Inserciones idempotentes y consultas relacionales.
-- `test_api.py`: Integración completa de endpoints, envoltura estándar y manejo de errores.

@@ -45,6 +45,23 @@ def test_filters_endpoint(client):
     assert "segments" in json_data["data"]
     assert "categories" in json_data["data"]
 
+def test_list_series_endpoint(client):
+    res = client.get("/api/v1/series?limit=10")
+    assert res.status_code == 200
+    json_data = res.json()
+    assert json_data["success"] is True
+    assert "data" in json_data
+    assert len(json_data["data"]) > 0
+    sample = json_data["data"][0]
+    assert "ticker" in sample
+    assert "series" in sample
+    assert "precio" in sample
+    assert "rendimiento_1a" in sample
+    assert "rendimiento_diario" in sample
+    assert "minimo_inversion" in sample
+    assert "category" in sample
+    assert "segment" in sample
+
 def test_list_funds_endpoint(client):
     res = client.get("/api/v1/funds?limit=10")
     assert res.status_code == 200

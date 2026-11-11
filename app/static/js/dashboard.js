@@ -1,5 +1,6 @@
 /**
- * Interactive Dashboard JavaScript for BBVA Fondos
+ * Interactive Dashboard JavaScript for BBVA Fondos App
+ * Renders all columns extracted from the official BBVA Anaquel PDF.
  */
 
 let state = {
@@ -9,6 +10,9 @@ let state = {
   search: "",
   segment: "",
   category: "",
+  is_debt_only: false,
+  sort_by: "ticker",
+  order: "ASC",
   chartInstance: null
 };
 
@@ -19,30 +23,50 @@ document.addEventListener("DOMContentLoaded", () => {
 async function initDashboard() {
   await loadTelemetry();
   await loadFilters();
-  await loadFundsTable();
+  await loadSeriesTable();
   setupEventListeners();
 }
 
 function setupEventListeners() {
-  // Search input debounced
+  // Debounced search
   let debounceTimer;
   document.getElementById("searchInput").addEventListener("input", (e) => {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       state.search = e.target.value.trim();
       state.page = 1;
-      loadFundsTable();
+      loadSeriesTable();
     }, 300);
   });
 
-  // Segment pill buttons
+  // Filter pills
   document.querySelectorAll(".pill-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".pill-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-      state.segment = btn.dataset.segment || "";
+
+      const filterType = btn.dataset.filter;
+      if (filterType === "debt-pf") {
+        state.segment = "Personas Físicas";
+        state.is_debt_only = true;
+        document.getElementById("categorySelect").value = "";
+        state.category = "";
+      } else if (filterType === "pf") {
+        state.segment = "Personas Físicas";
+        state.is_debt_only = false;
+      } else if (filterType === "pm") {
+        state.segment = "Personas Morales";
+        state.is_debt_only = false;
+      } else if (filterType === "colab") {
+        state.segment = "Colaboradores BBVA";
+        state.is_debt_only = false;
+      } else {
+        state.segment = "";
+        state.is_debt_only = false;
+      }
+
       state.page = 1;
-      loadFundsTable();
+      loadSeriesTable();
     });
   });
 
@@ -50,7 +74,16 @@ function setupEventListeners() {
   document.getElementById("categorySelect").addEventListener("change", (e) => {
     state.category = e.target.value;
     state.page = 1;
-    loadFundsTable();
+    loadSeriesTable();
+  });
+
+  // Sorting select
+  document.getElementById("sortSelect").addEventListener("change", (e) => {
+    const [sortBy, order] = e.target.value.split(":");
+    state.sort_by = sortBy;
+    state.order = order;
+    state.page = 1;
+    loadSeriesTable();
   });
 
   // Sync button
@@ -60,7 +93,7 @@ function setupEventListeners() {
   document.getElementById("prevPageBtn").addEventListener("click", () => {
     if (state.page > 1) {
       state.page--;
-      loadFundsTable();
+      loadSeriesTable();
     }
   });
 
@@ -68,11 +101,11 @@ function setupEventListeners() {
     const maxPage = Math.ceil(state.total / state.limit);
     if (state.page < maxPage) {
       state.page++;
-      loadFundsTable();
+      loadSeriesTable();
     }
   });
 
-  // Modal close
+  // Modal events
   document.getElementById("closeModalBtn").addEventListener("click", closeModal);
   document.getElementById("detailModal").addEventListener("click", (e) => {
     if (e.target.id === "detailModal") closeModal();
@@ -85,7 +118,7 @@ function setupEventListeners() {
 
 async function loadTelemetry() {
   try {
-    const res = await fetch("/api/v1/health");
+    const res = await fetch("api/v1/health");
     const json = await res.json();
     if (json.success && json.data) {
       const d = json.data;
@@ -101,7 +134,7 @@ async function loadTelemetry() {
 
 async function loadFilters() {
   try {
-    const res = await fetch("/api/v1/filters");
+    const res = await fetch("api/v1/filters");
     const json = await res.json();
     if (json.success && json.data) {
       const select = document.getElementById("categorySelect");
@@ -118,24 +151,39 @@ async function loadFilters() {
   }
 }
 
-async function loadFundsTable() {
-  const tbody = document.getElementById("fundsTableBody");
-  tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--text-secondary);">Cargando fondos...</td></tr>`;
+function formatPercent(val) {
+  if (val === null || val === undefined) return '<span class="text-muted">-</span>';
+  const cls = val >= 0 ? "yield-pos" : "yield-neg";
+  const sign = val > 0 ? "+" : "";
+  return `<span class="mono ${cls}">${sign}${val.toFixed(2)}%</span>`;
+}
+
+function formatCurrency(val) {
+  if (val === null || val === undefined) return '<span class="text-muted">-</span>';
+  return `<span class="mono" style="font-weight: 600;">$${val.toFixed(4)}</span>`;
+}
+
+async function loadSeriesTable() {
+  const tbody = document.getElementById("seriesTableBody");
+  tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 30px; color: var(--text-secondary);">Cargando catálogo completo de fondos...</td></tr>`;
 
   try {
     const params = new URLSearchParams({
       page: state.page,
       limit: state.limit,
+      sort_by: state.sort_by,
+      order: state.order,
+      is_debt_only: state.is_debt_only ? "true" : "false"
     });
     if (state.search) params.append("search", state.search);
     if (state.segment) params.append("segment", state.segment);
     if (state.category) params.append("category", state.category);
 
-    const res = await fetch(`/api/v1/funds?${params.toString()}`);
+    const res = await fetch(`api/v1/series?${params.toString()}`);
     const json = await res.json();
 
     if (!json.success || !json.data) {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--accent-danger);">Error al cargar los datos</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; color: var(--accent-danger);">Error al cargar las series de fondos</td></tr>`;
       return;
     }
 
@@ -143,44 +191,36 @@ async function loadFundsTable() {
     updatePaginationUI();
 
     if (json.data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">No se encontraron fondos con los filtros aplicados.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 40px; color: var(--text-muted);">No se encontraron fondos con los filtros aplicados.</td></tr>`;
       return;
     }
 
     tbody.innerHTML = "";
-    json.data.forEach(fund => {
+    json.data.forEach(item => {
       const tr = document.createElement("tr");
 
-      // Series tags
-      const seriesBadges = (fund.series_list || [])
-        .slice(0, 5)
-        .map(s => `<span class="badge badge-series">${s}</span>`)
-        .join("") + (fund.series_list.length > 5 ? `<span class="badge badge-series">+${fund.series_list.length - 5}</span>` : "");
-
-      // 1 Year Yield formatting
-      let yieldHtml = '<span class="mono text-muted">-</span>';
-      if (fund.latest_rendimiento_1a !== null && fund.latest_rendimiento_1a !== undefined) {
-        const cls = fund.latest_rendimiento_1a >= 0 ? "yield-pos" : "yield-neg";
-        const sign = fund.latest_rendimiento_1a > 0 ? "+" : "";
-        yieldHtml = `<span class="mono ${cls}">${sign}${fund.latest_rendimiento_1a.toFixed(2)}%</span>`;
-      }
-
-      // Price formatting
-      const priceHtml = fund.latest_price !== null && fund.latest_price !== undefined
-        ? `<span class="mono" style="font-weight: 600;">$${fund.latest_price.toFixed(4)}</span>`
-        : '<span class="mono text-muted">-</span>';
+      const califBadge = item.calificacion 
+        ? `<span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8;">${item.calificacion}</span>`
+        : '<span class="text-muted" style="font-size: 11px;">N/A</span>';
 
       tr.innerHTML = `
-        <td style="font-weight: 700; color: #fff;">${fund.ticker}</td>
-        <td><span class="badge badge-segment">${fund.segment}</span></td>
-        <td style="color: var(--text-secondary);">${fund.category}</td>
-        <td>${seriesBadges}</td>
-        <td>${priceHtml}</td>
-        <td>${yieldHtml}</td>
-        <td class="mono" style="color: var(--text-muted); font-size: 12px;">${fund.latest_report_date || "-"}</td>
-        <td>
-          <button class="btn btn-outline" style="padding: 4px 10px; font-size: 11px;" onclick="openDetailModal('${fund.ticker}', '${fund.segment}')">
-            Detalle e Historial
+        <td style="font-weight: 700; color: #fff;">${item.ticker}</td>
+        <td><span class="badge badge-series">${item.series}</span></td>
+        <td><span class="badge badge-segment">${item.segment}</span></td>
+        <td style="color: var(--text-secondary); font-size: 12px;">${item.category}</td>
+        <td class="mono" style="text-align: right;">$${(item.minimo_inversion || 0).toLocaleString()}</td>
+        <td style="text-align: center;">${califBadge}</td>
+        <td style="text-align: right;">${formatPercent(item.rendimiento_diario)}</td>
+        <td style="text-align: right;">${formatPercent(item.rendimiento_semanal)}</td>
+        <td style="text-align: right;">${formatPercent(item.rendimiento_mes)}</td>
+        <td style="text-align: right;">${formatPercent(item.rendimiento_anio)}</td>
+        <td style="text-align: right; font-weight: 700;">${formatPercent(item.rendimiento_1a)}</td>
+        <td style="text-align: right;">${formatPercent(item.rendimiento_2a)}</td>
+        <td style="text-align: right;">${formatCurrency(item.precio)}</td>
+        <td class="mono" style="text-align: center; color: var(--text-muted); font-size: 11px;">${item.report_date || "-"}</td>
+        <td style="text-align: center;">
+          <button class="btn btn-outline" style="padding: 3px 8px; font-size: 11px;" onclick="openHistoricalModal('${item.ticker}', '${item.series}', '${item.segment}')">
+            📈 Graficar
           </button>
         </td>
       `;
@@ -189,13 +229,13 @@ async function loadFundsTable() {
 
   } catch (err) {
     console.error("Error loading table:", err);
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--accent-danger);">Error de conexión con el servicio</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; color: var(--accent-danger);">Error de conexión con el servicio</td></tr>`;
   }
 }
 
 function updatePaginationUI() {
   const maxPage = Math.ceil(state.total / state.limit) || 1;
-  document.getElementById("pageInfo").textContent = `Página ${state.page} de ${maxPage} (${state.total} fondos)`;
+  document.getElementById("pageInfo").textContent = `Página ${state.page} de ${maxPage} (${state.total} series registradas)`;
   document.getElementById("prevPageBtn").disabled = state.page <= 1;
   document.getElementById("nextPageBtn").disabled = state.page >= maxPage;
 }
@@ -206,13 +246,13 @@ async function handleSync() {
   btn.textContent = "Sincronizando PDF...";
 
   try {
-    const res = await fetch("/api/v1/sync", { method: "POST" });
+    const res = await fetch("api/v1/sync", { method: "POST" });
     const json = await res.json();
     if (json.success) {
       showToast(json.data.message || "Sincronización completada con éxito.", "success");
       await loadTelemetry();
       await loadFilters();
-      await loadFundsTable();
+      await loadSeriesTable();
     } else {
       showToast(json.error?.message || "Error al sincronizar el Anaquel de BBVA.", "error");
     }
@@ -225,72 +265,40 @@ async function handleSync() {
   }
 }
 
-async function openDetailModal(ticker, segment) {
+async function openHistoricalModal(ticker, series, segment) {
   const modal = document.getElementById("detailModal");
-  document.getElementById("modalTitle").textContent = `${ticker} (${segment})`;
-  document.getElementById("modalSubtitle").textContent = "Cargando series y datos históricos...";
+  document.getElementById("modalTitle").textContent = `${ticker} · Serie ${series} (${segment})`;
+  document.getElementById("modalSubtitle").textContent = "Cargando historial de precios y rendimientos...";
   modal.classList.add("open");
 
   try {
-    const res = await fetch(`/api/v1/funds/${ticker}?segment=${encodeURIComponent(segment)}`);
+    const res = await fetch(`api/v1/funds/${ticker}/${series}/history?segment=${encodeURIComponent(segment)}`);
     const json = await res.json();
 
-    if (!json.success || !json.data || json.data.length === 0) {
-      document.getElementById("modalSubtitle").textContent = "No se encontraron detalles para este fondo.";
-      return;
-    }
+    const history = json.data || [];
+    document.getElementById("modalSubtitle").textContent = `${history.length} snapshot(s) históricos guardados en base de datos`;
 
-    const seriesData = json.data;
-    document.getElementById("modalSubtitle").textContent = `${seriesData[0].category} · ${seriesData.length} series registradas`;
-
-    // Populate series table
-    const tableBody = document.getElementById("modalSeriesBody");
+    // Populate snapshots table
+    const tableBody = document.getElementById("modalSnapshotsBody");
     tableBody.innerHTML = "";
 
-    seriesData.forEach((s, idx) => {
-      const snap = s.latest_snapshot || {};
+    history.slice().reverse().forEach(h => {
       const tr = document.createElement("tr");
-
-      const rendDia = snap.rendimiento_diario != null ? `${snap.rendimiento_diario >= 0 ? "+" : ""}${snap.rendimiento_diario.toFixed(2)}%` : "-";
-      const rendMes = snap.rendimiento_mes != null ? `${snap.rendimiento_mes >= 0 ? "+" : ""}${snap.rendimiento_mes.toFixed(2)}%` : "-";
-      const rend1a = snap.rendimiento_1a != null ? `${snap.rendimiento_1a >= 0 ? "+" : ""}${snap.rendimiento_1a.toFixed(2)}%` : "-";
-      const precio = snap.precio != null ? `$${snap.precio.toFixed(4)}` : "-";
-
       tr.innerHTML = `
-        <td style="font-weight: 700;"><span class="badge badge-series">${s.series}</span></td>
-        <td class="mono">$${(s.minimo_inversion || 0).toLocaleString()}</td>
-        <td>${s.calificacion || '<span class="text-muted">N/A</span>'}</td>
-        <td class="mono" style="font-weight: 600;">${precio}</td>
-        <td class="mono">${rendDia}</td>
-        <td class="mono">${rendMes}</td>
-        <td class="mono ${snap.rendimiento_1a >= 0 ? "yield-pos" : "yield-neg"}">${rend1a}</td>
-        <td>
-          <button class="btn btn-outline" style="padding: 2px 8px; font-size: 11px;" onclick="loadSeriesChart('${ticker}', '${s.series}', '${segment}')">
-            Graficar
-          </button>
-        </td>
+        <td class="mono">${h.report_date}</td>
+        <td class="mono" style="text-align: right; font-weight: 600;">$${h.precio.toFixed(4)}</td>
+        <td style="text-align: right;">${formatPercent(h.rendimiento_diario)}</td>
+        <td style="text-align: right;">${formatPercent(h.rendimiento_semanal)}</td>
+        <td style="text-align: right;">${formatPercent(h.rendimiento_mes)}</td>
+        <td style="text-align: right;">${formatPercent(h.rendimiento_anio)}</td>
+        <td style="text-align: right; font-weight: 700;">${formatPercent(h.rendimiento_1a)}</td>
+        <td style="text-align: right;">${formatPercent(h.rendimiento_2a)}</td>
       `;
       tableBody.appendChild(tr);
     });
 
-    // Default graph first series
-    if (seriesData.length > 0) {
-      loadSeriesChart(ticker, seriesData[0].series, segment);
-    }
-
-  } catch (err) {
-    console.error("Error opening modal:", err);
-  }
-}
-
-async function loadSeriesChart(ticker, series, segment) {
-  try {
-    const res = await fetch(`/api/v1/funds/${ticker}/${series}/history?segment=${encodeURIComponent(segment)}`);
-    const json = await res.json();
-
-    const history = json.data || [];
+    // Render Chart.js
     const ctx = document.getElementById("historyChartCanvas").getContext("2d");
-
     const labels = history.map(h => h.report_date);
     const prices = history.map(h => h.precio);
     const yields = history.map(h => h.rendimiento_1a);
@@ -308,7 +316,7 @@ async function loadSeriesChart(ticker, series, segment) {
             label: `Precio ${ticker} (${series})`,
             data: prices.length > 0 ? prices : [0],
             borderColor: "#10b981",
-            backgroundColor: "rgba(16, 185, 129, 0.1)",
+            backgroundColor: "rgba(16, 185, 129, 0.12)",
             borderWidth: 2,
             tension: 0.2,
             yAxisID: "y",
@@ -317,7 +325,7 @@ async function loadSeriesChart(ticker, series, segment) {
           {
             label: "Rendimiento 1A (%)",
             data: yields.length > 0 ? yields : [0],
-            borderColor: "#0ea5e9",
+            borderColor: "#38bdf8",
             borderWidth: 1.5,
             borderDash: [5, 5],
             tension: 0.2,
@@ -328,14 +336,9 @@ async function loadSeriesChart(ticker, series, segment) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        interaction: {
-          mode: "index",
-          intersect: false,
-        },
+        interaction: { mode: "index", intersect: false },
         plugins: {
-          legend: {
-            labels: { color: "#fafafa", font: { family: "system-ui" } }
-          },
+          legend: { labels: { color: "#fafafa", font: { family: "system-ui" } } },
           tooltip: {
             backgroundColor: "#18181b",
             titleColor: "#fafafa",
@@ -345,10 +348,7 @@ async function loadSeriesChart(ticker, series, segment) {
           }
         },
         scales: {
-          x: {
-            grid: { color: "#27272a" },
-            ticks: { color: "#a1a1aa" }
-          },
+          x: { grid: { color: "#27272a" }, ticks: { color: "#a1a1aa" } },
           y: {
             type: "linear",
             position: "left",
@@ -363,7 +363,7 @@ async function loadSeriesChart(ticker, series, segment) {
             position: "right",
             grid: { drawOnChartArea: false },
             ticks: {
-              color: "#0ea5e9",
+              color: "#38bdf8",
               callback: (val) => `${val}%`
             }
           }
@@ -372,7 +372,7 @@ async function loadSeriesChart(ticker, series, segment) {
     });
 
   } catch (err) {
-    console.error("Error charting series:", err);
+    console.error("Error opening historical modal:", err);
   }
 }
 

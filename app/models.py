@@ -25,6 +25,25 @@ class RendimientoSnapshot(BaseModel):
     rendimiento_2a: Optional[float] = Field(None, description="2-year annualized yield percentage")
     precio: float = Field(..., description="Share price in Mexican Pesos (MXN) or USD")
 
+class FundSeriesRow(BaseModel):
+    """Full flat row representation of a fund series with all Anaquel columns."""
+    model_config = ConfigDict(extra="forbid")
+
+    ticker: str = Field(..., description="Fund Ticker symbol (ej. BBVALIQ)")
+    series: str = Field(..., description="Fund Series (ej. B, C, P)")
+    segment: str = Field(..., description="Client segment: Personas Físicas, Personas Morales, Colaboradores")
+    category: str = Field(..., description="Fund category")
+    minimo_inversion: float = Field(0.0, description="Minimum investment amount")
+    calificacion: Optional[str] = Field(None, description="Risk / Credit rating (ej. AAA/1, AA/3)")
+    rendimiento_diario: Optional[float] = Field(None, description="Daily yield percentage")
+    rendimiento_semanal: Optional[float] = Field(None, description="Weekly yield percentage")
+    rendimiento_mes: Optional[float] = Field(None, description="Month-to-date yield percentage")
+    rendimiento_anio: Optional[float] = Field(None, description="Year-to-date yield percentage")
+    rendimiento_1a: Optional[float] = Field(None, description="1-year annualized yield percentage")
+    rendimiento_2a: Optional[float] = Field(None, description="2-year annualized yield percentage")
+    precio: float = Field(..., description="Share price")
+    report_date: Optional[str] = Field(None, description="Report date YYYY-MM-DD")
+
 class FundSeriesDetail(BaseModel):
     """Detailed series metrics including latest snapshot and metadata."""
     model_config = ConfigDict(extra="forbid")

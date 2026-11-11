@@ -99,7 +99,54 @@ Obtiene las opciones únicas de filtros disponibles (segmentos de cliente y cate
 
 ---
 
-### 3.3 `GET /api/v1/funds`
+### 3.3 `GET /api/v1/series`
+Consulta exhaustiva de todas las series individuales de fondos con **todas las columnas** extraídas del Anaquel (precios, montos mínimos, calificaciones y rendimientos en todos los horizontes temporales).
+
+- **Parámetros de Consulta (Query Params)**:
+  | Parámetro | Tipo | Obligatorio | Descripción |
+  | :--- | :--- | :--- | :--- |
+  | `segment` | `string` | No | Filtro por segmento (`Personas Físicas`, `Personas Morales`, `Colaboradores BBVA`) |
+  | `category` | `string` | No | Filtro por categoría exacta del fondo |
+  | `is_debt_only` | `boolean` | No | Si es `true`, filtra todos los fondos de deuda y liquidez excluyendo renta variable |
+  | `search` | `string` | No | Búsqueda por ticker (ej. `BBVALIQ`) o serie |
+  | `sort_by` | `string` | No | Columna de ordenamiento (`ticker`, `precio`, `rendimiento_1a`, `rendimiento_diario`, etc.) |
+  | `order` | `string` | No | Dirección (`ASC` o `DESC`, predeterminado `ASC`) |
+  | `page` | `integer` | No | Número de página (predeterminado: `1`) |
+  | `limit` | `integer` | No | Elementos por página (predeterminado: `50`, máx: `500`) |
+
+- **Respuesta (200 OK)**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "ticker": "BBVALIQ",
+      "series": "B",
+      "segment": "Personas Físicas",
+      "category": "Fondos de Deuda",
+      "minimo_inversion": 0.0,
+      "calificacion": "AAA/1",
+      "rendimiento_diario": 4.40,
+      "rendimiento_semanal": 4.21,
+      "rendimiento_mes": 2.93,
+      "rendimiento_anio": 4.26,
+      "rendimiento_1a": 4.39,
+      "rendimiento_2a": 5.67,
+      "precio": 22.009366,
+      "report_date": "2026-11-10"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 50,
+    "total": 492
+  }
+}
+```
+
+---
+
+### 3.4 `GET /api/v1/funds`
 Consulta paginada del catálogo de fondos con sus métricas más recientes y series asociadas.
 
 - **Parámetros de Consulta (Query Params)**:

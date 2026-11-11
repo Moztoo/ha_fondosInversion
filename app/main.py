@@ -52,6 +52,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Home Assistant Ingress Middleware
+@app.middleware("http")
+async def handle_ha_ingress_path(request: Request, call_next):
+    ingress_path = request.headers.get("x-ingress-path")
+    if ingress_path:
+        request.scope["root_path"] = ingress_path
+    response = await call_next(request)
+    return response
+
 # Exception handlers for standard error envelope
 @app.exception_handler(HTTPException)
 async def custom_http_exception_handler(request: Request, exc: HTTPException):

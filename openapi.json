@@ -50,6 +50,157 @@
         }
       }
     },
+    "/api/v1/series": {
+      "get": {
+        "tags": [
+          "BBVA Fondos"
+        ],
+        "summary": "List All Fund Series (All Columns)",
+        "description": "Retrieve all individual fund series with all columns from the Anaquel (Prices, Min Inversion, Ratings, All Yield Horizons).",
+        "operationId": "list_series_api_v1_series_get",
+        "parameters": [
+          {
+            "name": "segment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by segment",
+              "title": "Segment"
+            },
+            "description": "Filter by segment"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by category",
+              "title": "Category"
+            },
+            "description": "Filter by category"
+          },
+          {
+            "name": "is_debt_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Filter only debt and liquidity funds",
+              "default": false,
+              "title": "Is Debt Only"
+            },
+            "description": "Filter only debt and liquidity funds"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search ticker or series",
+              "title": "Search"
+            },
+            "description": "Search ticker or series"
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Field to sort by (ticker, precio, rendimiento_1a, etc.)",
+              "default": "ticker",
+              "title": "Sort By"
+            },
+            "description": "Field to sort by (ticker, precio, rendimiento_1a, etc.)"
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Sort order (ASC or DESC)",
+              "default": "ASC",
+              "title": "Order"
+            },
+            "description": "Sort order (ASC or DESC)"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "description": "Items per page",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse_List_FundSeriesRow__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/funds": {
       "get": {
         "tags": [
@@ -516,6 +667,148 @@
         "title": "FundSeriesDetail",
         "description": "Detailed series metrics including latest snapshot and metadata."
       },
+      "FundSeriesRow": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker",
+            "description": "Fund Ticker symbol (ej. BBVALIQ)"
+          },
+          "series": {
+            "type": "string",
+            "title": "Series",
+            "description": "Fund Series (ej. B, C, P)"
+          },
+          "segment": {
+            "type": "string",
+            "title": "Segment",
+            "description": "Client segment: Personas F\u00edsicas, Personas Morales, Colaboradores"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "Fund category"
+          },
+          "minimo_inversion": {
+            "type": "number",
+            "title": "Minimo Inversion",
+            "description": "Minimum investment amount",
+            "default": 0.0
+          },
+          "calificacion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calificacion",
+            "description": "Risk / Credit rating (ej. AAA/1, AA/3)"
+          },
+          "rendimiento_diario": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento Diario",
+            "description": "Daily yield percentage"
+          },
+          "rendimiento_semanal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento Semanal",
+            "description": "Weekly yield percentage"
+          },
+          "rendimiento_mes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento Mes",
+            "description": "Month-to-date yield percentage"
+          },
+          "rendimiento_anio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento Anio",
+            "description": "Year-to-date yield percentage"
+          },
+          "rendimiento_1a": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento 1A",
+            "description": "1-year annualized yield percentage"
+          },
+          "rendimiento_2a": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento 2A",
+            "description": "2-year annualized yield percentage"
+          },
+          "precio": {
+            "type": "number",
+            "title": "Precio",
+            "description": "Share price"
+          },
+          "report_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Date",
+            "description": "Report date YYYY-MM-DD"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ticker",
+          "series",
+          "segment",
+          "category",
+          "precio"
+        ],
+        "title": "FundSeriesRow",
+        "description": "Full flat row representation of a fund series with all Anaquel columns."
+      },
       "FundSummary": {
         "properties": {
           "ticker": {
@@ -816,6 +1109,37 @@
           "data"
         ],
         "title": "StandardResponse[List[FundSeriesDetail]]"
+      },
+      "StandardResponse_List_FundSeriesRow__": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/FundSeriesRow"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "StandardResponse[List[FundSeriesRow]]"
       },
       "StandardResponse_List_FundSummary__": {
         "properties": {

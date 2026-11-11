@@ -5,7 +5,6 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
-import pypdf
 
 logger = logging.getLogger("bbva_fondos.parser")
 
@@ -55,9 +54,16 @@ class AnaquelParser:
         return float(cleaned)
 
     def parse_pdf(self, pdf_content: bytes) -> ParsedAnaquelReport:
-        """Parse full PDF content into structured records."""
-        stream = io.BytesIO(pdf_content)
-        reader = pypdf.PdfReader(stream)
+        """Parse full PDF content into structured records using pdfplumber."""
+        try:
+            import pdfplumber
+            return self._parse_with_pdfplumber(pdf_content)
+        except Exception as e:
+            logger.warning("pdfplumber parsing failed (%s), falling back to pypdf", e)
+            return self._parse_with_pypdf(pdf_content)
+
+    def _parse_with_pdfplumber(self, pdf_content: bytes) -> ParsedAnaquelReport:
+        import pdfplumber
 
         records: List[ParsedFundRecord] = []
         segments_seen = set()
@@ -65,51 +71,46 @@ class AnaquelParser:
         detected_date: Optional[str] = None
 
         current_segment = "Personas Físicas"
-        current_category = "Fondos de Inversión"
+        current_category = "Fondos de Deuda"
 
-        for page_idx, page in enumerate(reader.pages):
-            text = page.extract_text() or ""
-            lines = text.split("\n")
-
-            for line in lines:
-                line_str = line.strip()
-                if not line_str:
+        with pdfplumber.open(io.BytesIO(pdf_content)) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text()
+                if not text:
                     continue
 
-                # 1. Detect report date
-                if not detected_date:
-                    # Look for date pattern DD/MM/YYYY
-                    m_date = re.search(r"\b(\d{2}/\d{2}/\d{4})\b", line_str)
-                    if m_date:
-                        raw_date = m_date.group(1)
-                        detected_date = self._parse_date(raw_date)
-                        logger.info("Found report date in PDF: %s (page %d)", detected_date, page_idx + 1)
+                lines = text.split("\n")
+                for line in lines:
+                    l_str = line.strip()
+                    if not l_str:
+                        continue
 
-                # 2. Detect segment headers
-                if "Personas Físicas" in line_str and "Anaquel" not in line_str:
-                    current_segment = "Personas Físicas"
-                    segments_seen.add(current_segment)
-                elif "Personas Morales" in line_str and "Anaquel" not in line_str:
-                    current_segment = "Personas Morales"
-                    segments_seen.add(current_segment)
-                elif "Colaboradores BBVA" in line_str and "Anaquel" not in line_str:
-                    current_segment = "Colaboradores BBVA"
-                    segments_seen.add(current_segment)
+                    # Extract date
+                    if not detected_date:
+                        m_date = re.search(r"\b(\d{2}/\d{2}/\d{4})\b", l_str)
+                        if m_date:
+                            detected_date = self._parse_date(m_date.group(1))
 
-                # 3. Detect category headers
-                if line_str.startswith("Fondos de") or line_str.startswith("Fondos Ciclos"):
-                    current_category = line_str
-                    categories_seen.add(current_category)
-                    continue
+                    # Segment headers
+                    if "Personas Físicas" in l_str and "Anaquel" not in l_str:
+                        current_segment = "Personas Físicas"
+                        segments_seen.add(current_segment)
+                    elif "Personas Morales" in l_str and "Anaquel" not in l_str:
+                        current_segment = "Personas Morales"
+                        segments_seen.add(current_segment)
+                    elif "Colaboradores BBVA" in l_str and "Anaquel" not in l_str:
+                        current_segment = "Colaboradores BBVA"
+                        segments_seen.add(current_segment)
 
-                # 4. Check for table rows
-                # Expected row layout:
-                # [Ticker] [Serie] [Mínimo] [Optional: Calificación] [%Diario] [%Semanal] [%Mes] [%Año] [%1A] [%2A] [Precio]
-                parts = line_str.split()
-                if len(parts) >= 9:
-                    # Verify if trailing parts contain percentage signs
-                    trailing_candidates = parts[-7:-1]
-                    if any("%" in p for p in trailing_candidates):
+                    # Category headers
+                    if l_str.startswith("Fondos"):
+                        current_category = l_str
+                        categories_seen.add(current_category)
+                        continue
+
+                    # Fund rows
+                    parts = l_str.split()
+                    if len(parts) >= 9 and any("%" in p for p in parts[-7:-1]):
                         try:
                             precio = self._clean_float(parts[-1])
                             rend_2a = self._clean_float(parts[-2])
@@ -119,11 +120,10 @@ class AnaquelParser:
                             rend_sem = self._clean_float(parts[-6])
                             rend_dia = self._clean_float(parts[-7])
 
-                            ticker = parts[0].strip()
-                            series = parts[1].strip()
+                            ticker = parts[0].strip().upper()
+                            series = parts[1].strip().upper()
                             minimo = self._clean_float(parts[2])
 
-                            # Calificación is any tokens between minimo and rend_dia
                             rating_tokens = parts[3:-7]
                             calificacion = " ".join(rating_tokens).strip() if rating_tokens else None
 
@@ -148,17 +148,93 @@ class AnaquelParser:
                             records.append(rec)
                             segments_seen.add(current_segment)
                             categories_seen.add(current_category)
-
-                        except Exception as e:
-                            logger.debug("Skipping unparseable line: %s (%s)", line_str, e)
+                        except Exception:
+                            continue
 
         final_date = detected_date or datetime.now().strftime("%Y-%m-%d")
-        logger.info(
-            "Parsed PDF successfully: %d records found for date %s",
-            len(records),
-            final_date,
+        return ParsedAnaquelReport(
+            report_date=final_date,
+            total_records=len(records),
+            records=records,
+            segments_found=sorted(list(segments_seen)),
+            categories_found=sorted(list(categories_seen)),
         )
 
+    def _parse_with_pypdf(self, pdf_content: bytes) -> ParsedAnaquelReport:
+        import pypdf
+
+        reader = pypdf.PdfReader(io.BytesIO(pdf_content))
+        records: List[ParsedFundRecord] = []
+        segments_seen = set()
+        categories_seen = set()
+        detected_date: Optional[str] = None
+
+        current_segment = "Personas Físicas"
+        current_category = "Fondos de Deuda"
+
+        for page in reader.pages:
+            text = page.extract_text() or ""
+            for line in text.split("\n"):
+                l_str = line.strip()
+                if not l_str:
+                    continue
+
+                if not detected_date:
+                    m_date = re.search(r"\b(\d{2}/\d{2}/\d{4})\b", l_str)
+                    if m_date:
+                        detected_date = self._parse_date(m_date.group(1))
+
+                if "Personas Físicas" in l_str and "Anaquel" not in l_str:
+                    current_segment = "Personas Físicas"
+                elif "Personas Morales" in l_str and "Anaquel" not in l_str:
+                    current_segment = "Personas Morales"
+                elif "Colaboradores BBVA" in l_str and "Anaquel" not in l_str:
+                    current_segment = "Colaboradores BBVA"
+
+                if l_str.startswith("Fondos"):
+                    current_category = l_str
+                    continue
+
+                parts = l_str.split()
+                if len(parts) >= 9 and any("%" in p for p in parts[-7:-1]):
+                    try:
+                        precio = self._clean_float(parts[-1])
+                        rend_2a = self._clean_float(parts[-2])
+                        rend_1a = self._clean_float(parts[-3])
+                        rend_anio = self._clean_float(parts[-4])
+                        rend_mes = self._clean_float(parts[-5])
+                        rend_sem = self._clean_float(parts[-6])
+                        rend_dia = self._clean_float(parts[-7])
+
+                        ticker = parts[0].strip().upper()
+                        series = parts[1].strip().upper()
+                        minimo = self._clean_float(parts[2])
+                        rating_tokens = parts[3:-7]
+                        calificacion = " ".join(rating_tokens).strip() if rating_tokens else None
+
+                        rec = ParsedFundRecord(
+                            ticker=ticker,
+                            series=series,
+                            segment=current_segment,
+                            category=current_category,
+                            minimo_inversion=minimo,
+                            calificacion=calificacion,
+                            rendimiento_diario=rend_dia,
+                            rendimiento_semanal=rend_sem,
+                            rendimiento_mes=rend_mes,
+                            rendimiento_anio=rend_anio,
+                            rendimiento_1a=rend_1a,
+                            rendimiento_2a=rend_2a,
+                            precio=precio,
+                            report_date=detected_date or datetime.now().strftime("%Y-%m-%d"),
+                        )
+                        records.append(rec)
+                        segments_seen.add(current_segment)
+                        categories_seen.add(current_category)
+                    except Exception:
+                        continue
+
+        final_date = detected_date or datetime.now().strftime("%Y-%m-%d")
         return ParsedAnaquelReport(
             report_date=final_date,
             total_records=len(records),

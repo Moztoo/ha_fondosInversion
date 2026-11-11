@@ -1,0 +1,1446 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "BBVA Fondos de Inversi\u00f3n API & Dashboard",
+    "description": "Servicio de extracci\u00f3n, almacenamiento hist\u00f3rico y consulta de rendimientos de fondos de inversi\u00f3n BBVA M\u00e9xico ('Anaquel del D\u00eda Actual').",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "BBVA Fondos"
+        ],
+        "summary": "System Health & Database Statistics",
+        "description": "Check operational health, database record counts, and last sync timestamp.",
+        "operationId": "get_health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse_SystemHealth_"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/filters": {
+      "get": {
+        "tags": [
+          "BBVA Fondos"
+        ],
+        "summary": "Filter Options",
+        "description": "Retrieve available customer segments and fund categories.",
+        "operationId": "get_filters_api_v1_filters_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse_dict_"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/series": {
+      "get": {
+        "tags": [
+          "BBVA Fondos"
+        ],
+        "summary": "List All Fund Series (All Columns)",
+        "description": "Retrieve all individual fund series with all columns from the Anaquel (Prices, Min Inversion, Ratings, All Yield Horizons).",
+        "operationId": "list_series_api_v1_series_get",
+        "parameters": [
+          {
+            "name": "segment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by segment",
+              "title": "Segment"
+            },
+            "description": "Filter by segment"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by category",
+              "title": "Category"
+            },
+            "description": "Filter by category"
+          },
+          {
+            "name": "is_debt_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Filter only debt and liquidity funds",
+              "default": false,
+              "title": "Is Debt Only"
+            },
+            "description": "Filter only debt and liquidity funds"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search ticker or series",
+              "title": "Search"
+            },
+            "description": "Search ticker or series"
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Field to sort by (ticker, precio, rendimiento_1a, etc.)",
+              "default": "ticker",
+              "title": "Sort By"
+            },
+            "description": "Field to sort by (ticker, precio, rendimiento_1a, etc.)"
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Sort order (ASC or DESC)",
+              "default": "ASC",
+              "title": "Order"
+            },
+            "description": "Sort order (ASC or DESC)"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "description": "Items per page",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse_List_FundSeriesRow__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/funds": {
+      "get": {
+        "tags": [
+          "BBVA Fondos"
+        ],
+        "summary": "List BBVA Funds",
+        "description": "Retrieve paginated list of funds with current reference metrics, search, and segment/category filters.",
+        "operationId": "list_funds_api_v1_funds_get",
+        "parameters": [
+          {
+            "name": "segment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by segment (Personas F\u00edsicas, Personas Morales, Colaboradores BBVA)",
+              "title": "Segment"
+            },
+            "description": "Filter by segment (Personas F\u00edsicas, Personas Morales, Colaboradores BBVA)"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by fund category",
+              "title": "Category"
+            },
+            "description": "Filter by fund category"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search ticker or fund name",
+              "title": "Search"
+            },
+            "description": "Search ticker or fund name"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "description": "Items per page",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse_List_FundSummary__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/funds/{ticker}": {
+      "get": {
+        "tags": [
+          "BBVA Fondos"
+        ],
+        "summary": "Fund Series & Latest Snapshots",
+        "description": "Retrieve all series, minimum investments, ratings, and latest price/yields for a specific fund ticker.",
+        "operationId": "get_fund_series_api_v1_funds__ticker__get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "segment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional filter by segment",
+              "title": "Segment"
+            },
+            "description": "Optional filter by segment"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse_List_FundSeriesDetail__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/funds/{ticker}/{series}": {
+      "get": {
+        "tags": [
+          "BBVA Fondos"
+        ],
+        "summary": "Specific Fund Series Detail",
+        "description": "Retrieve metadata and latest performance snapshot for an exact fund ticker and series.",
+        "operationId": "get_series_detail_api_v1_funds__ticker___series__get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "series",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Series"
+            }
+          },
+          {
+            "name": "segment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional segment",
+              "title": "Segment"
+            },
+            "description": "Optional segment"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse_FundSeriesDetail_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/funds/{ticker}/{series}/history": {
+      "get": {
+        "tags": [
+          "BBVA Fondos"
+        ],
+        "summary": "Historical Performance Timeline",
+        "description": "Retrieve historical time-series of prices and yields for charting and external consumption.",
+        "operationId": "get_series_history_api_v1_funds__ticker___series__history_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "series",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Series"
+            }
+          },
+          {
+            "name": "segment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional segment",
+              "title": "Segment"
+            },
+            "description": "Optional segment"
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start date (YYYY-MM-DD)",
+              "title": "From Date"
+            },
+            "description": "Start date (YYYY-MM-DD)"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End date (YYYY-MM-DD)",
+              "title": "To Date"
+            },
+            "description": "End date (YYYY-MM-DD)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "description": "Max snapshots",
+              "default": 365,
+              "title": "Limit"
+            },
+            "description": "Max snapshots"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse_List_RendimientoSnapshot__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sync": {
+      "post": {
+        "tags": [
+          "BBVA Fondos"
+        ],
+        "summary": "Trigger Anaquel PDF Synchronization",
+        "description": "Fetch the latest PDF from BBVA web repository, parse funds and persist snapshots.",
+        "operationId": "trigger_sync_api_v1_sync_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse_SyncResult_"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "FundSeriesDetail": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Unique Series ID"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker",
+            "description": "Fund Ticker symbol (e.g. BBVALIQ, BBVARV)"
+          },
+          "series": {
+            "type": "string",
+            "title": "Series",
+            "description": "Fund Series (e.g. B, C, P, PV, UHN)"
+          },
+          "segment": {
+            "type": "string",
+            "title": "Segment",
+            "description": "Client segment: Personas F\u00edsicas, Personas Morales, Colaboradores"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "Fund category: Fondos de Deuda, Renta Variable, etc."
+          },
+          "minimo_inversion": {
+            "type": "number",
+            "title": "Minimo Inversion",
+            "description": "Minimum investment amount in currency",
+            "default": 0.0
+          },
+          "calificacion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calificacion",
+            "description": "Credit / Risk rating (e.g. AAA/1, AA/2)"
+          },
+          "latest_snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RendimientoSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Latest available yields and price"
+          },
+          "history_count": {
+            "type": "integer",
+            "title": "History Count",
+            "description": "Total historical snapshots recorded",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "ticker",
+          "series",
+          "segment",
+          "category"
+        ],
+        "title": "FundSeriesDetail",
+        "description": "Detailed series metrics including latest snapshot and metadata."
+      },
+      "FundSeriesRow": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker",
+            "description": "Fund Ticker symbol (ej. BBVALIQ)"
+          },
+          "series": {
+            "type": "string",
+            "title": "Series",
+            "description": "Fund Series (ej. B, C, P)"
+          },
+          "segment": {
+            "type": "string",
+            "title": "Segment",
+            "description": "Client segment: Personas F\u00edsicas, Personas Morales, Colaboradores"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "Fund category"
+          },
+          "minimo_inversion": {
+            "type": "number",
+            "title": "Minimo Inversion",
+            "description": "Minimum investment amount",
+            "default": 0.0
+          },
+          "calificacion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calificacion",
+            "description": "Risk / Credit rating (ej. AAA/1, AA/3)"
+          },
+          "rendimiento_diario": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento Diario",
+            "description": "Daily yield percentage"
+          },
+          "rendimiento_semanal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento Semanal",
+            "description": "Weekly yield percentage"
+          },
+          "rendimiento_mes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento Mes",
+            "description": "Month-to-date yield percentage"
+          },
+          "rendimiento_anio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento Anio",
+            "description": "Year-to-date yield percentage"
+          },
+          "rendimiento_1a": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento 1A",
+            "description": "1-year annualized yield percentage"
+          },
+          "rendimiento_2a": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento 2A",
+            "description": "2-year annualized yield percentage"
+          },
+          "precio": {
+            "type": "number",
+            "title": "Precio",
+            "description": "Share price"
+          },
+          "report_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Date",
+            "description": "Report date YYYY-MM-DD"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ticker",
+          "series",
+          "segment",
+          "category",
+          "precio"
+        ],
+        "title": "FundSeriesRow",
+        "description": "Full flat row representation of a fund series with all Anaquel columns."
+      },
+      "FundSummary": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker",
+            "description": "Fund Ticker symbol"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Display name of the fund"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "Category"
+          },
+          "segment": {
+            "type": "string",
+            "title": "Segment",
+            "description": "Client segment"
+          },
+          "series_list": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Series List",
+            "description": "Available series for this fund"
+          },
+          "latest_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Price",
+            "description": "Latest price of primary/reference series"
+          },
+          "latest_rendimiento_1a": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Rendimiento 1A",
+            "description": "Latest 1-year yield of primary series"
+          },
+          "latest_report_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Report Date",
+            "description": "Latest update date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ticker",
+          "category",
+          "segment"
+        ],
+        "title": "FundSummary",
+        "description": "Aggregated fund view grouping series."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "RendimientoSnapshot": {
+        "properties": {
+          "report_date": {
+            "type": "string",
+            "title": "Report Date",
+            "description": "Report elaboration date (YYYY-MM-DD)"
+          },
+          "rendimiento_diario": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento Diario",
+            "description": "Daily yield percentage"
+          },
+          "rendimiento_semanal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento Semanal",
+            "description": "Weekly yield percentage"
+          },
+          "rendimiento_mes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento Mes",
+            "description": "Month-to-date yield percentage"
+          },
+          "rendimiento_anio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento Anio",
+            "description": "Year-to-date yield percentage"
+          },
+          "rendimiento_1a": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento 1A",
+            "description": "1-year annualized yield percentage"
+          },
+          "rendimiento_2a": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento 2A",
+            "description": "2-year annualized yield percentage"
+          },
+          "precio": {
+            "type": "number",
+            "title": "Precio",
+            "description": "Share price in Mexican Pesos (MXN) or USD"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "report_date",
+          "precio"
+        ],
+        "title": "RendimientoSnapshot",
+        "description": "Yields and price snapshot for a specific date."
+      },
+      "ResponseMeta": {
+        "properties": {
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "filters": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filters"
+          }
+        },
+        "type": "object",
+        "title": "ResponseMeta",
+        "description": "Standard metadata for list and pagination responses."
+      },
+      "StandardResponse_FundSeriesDetail_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/FundSeriesDetail"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "StandardResponse[FundSeriesDetail]"
+      },
+      "StandardResponse_List_FundSeriesDetail__": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/FundSeriesDetail"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "StandardResponse[List[FundSeriesDetail]]"
+      },
+      "StandardResponse_List_FundSeriesRow__": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/FundSeriesRow"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "StandardResponse[List[FundSeriesRow]]"
+      },
+      "StandardResponse_List_FundSummary__": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/FundSummary"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "StandardResponse[List[FundSummary]]"
+      },
+      "StandardResponse_List_RendimientoSnapshot__": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/RendimientoSnapshot"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "StandardResponse[List[RendimientoSnapshot]]"
+      },
+      "StandardResponse_SyncResult_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/SyncResult"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "StandardResponse[SyncResult]"
+      },
+      "StandardResponse_SystemHealth_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/SystemHealth"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "StandardResponse[SystemHealth]"
+      },
+      "StandardResponse_dict_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "StandardResponse[dict]"
+      },
+      "SyncResult": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "report_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Date"
+          },
+          "total_parsed": {
+            "type": "integer",
+            "title": "Total Parsed"
+          },
+          "new_snapshots_inserted": {
+            "type": "integer",
+            "title": "New Snapshots Inserted"
+          },
+          "funds_updated": {
+            "type": "integer",
+            "title": "Funds Updated"
+          },
+          "duration_seconds": {
+            "type": "number",
+            "title": "Duration Seconds"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "success",
+          "status",
+          "report_date",
+          "total_parsed",
+          "new_snapshots_inserted",
+          "funds_updated",
+          "duration_seconds",
+          "message"
+        ],
+        "title": "SyncResult",
+        "description": "Outcome of a scraper synchronization run."
+      },
+      "SystemHealth": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "total_funds": {
+            "type": "integer",
+            "title": "Total Funds"
+          },
+          "total_series": {
+            "type": "integer",
+            "title": "Total Series"
+          },
+          "total_snapshots": {
+            "type": "integer",
+            "title": "Total Snapshots"
+          },
+          "last_report_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Report Date"
+          },
+          "last_sync_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "total_funds",
+          "total_series",
+          "total_snapshots",
+          "last_report_date",
+          "last_sync_time"
+        ],
+        "title": "SystemHealth",
+        "description": "Health check payload for monitoring."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

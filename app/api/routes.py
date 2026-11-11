@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from app.models import (
     ErrorPayload,
     FundSeriesDetail,
+    FundSeriesRow,
     FundSummary,
     RendimientoSnapshot,
     ResponseMeta,
@@ -40,6 +41,47 @@ def get_health():
 def get_filters():
     data = service.get_filters()
     return StandardResponse(data=data)
+
+@router.get(
+    "/series",
+    response_model=StandardResponse[List[FundSeriesRow]],
+    summary="List All Fund Series (All Columns)",
+    description="Retrieve all individual fund series with all columns from the Anaquel (Prices, Min Inversion, Ratings, All Yield Horizons).",
+)
+def list_series(
+    segment: Optional[str] = Query(None, description="Filter by segment"),
+    category: Optional[str] = Query(None, description="Filter by category"),
+    is_debt_only: bool = Query(False, description="Filter only debt and liquidity funds"),
+    search: Optional[str] = Query(None, description="Search ticker or series"),
+    sort_by: str = Query("ticker", description="Field to sort by (ticker, precio, rendimiento_1a, etc.)"),
+    order: str = Query("ASC", description="Sort order (ASC or DESC)"),
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(50, ge=1, le=500, description="Items per page"),
+):
+    series, total = service.get_series_catalog(
+        segment=segment,
+        category=category,
+        is_debt_only=is_debt_only,
+        search=search,
+        sort_by=sort_by,
+        order=order,
+        page=page,
+        limit=limit,
+    )
+    meta = ResponseMeta(
+        page=page,
+        limit=limit,
+        total=total,
+        filters={
+            "segment": segment,
+            "category": category,
+            "is_debt_only": is_debt_only,
+            "search": search,
+            "sort_by": sort_by,
+            "order": order,
+        },
+    )
+    return StandardResponse(data=series, meta=meta)
 
 @router.get(
     "/funds",

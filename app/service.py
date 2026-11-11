@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from app.database import get_sync_connection
 from app.models import (
     FundSeriesDetail,
+    FundSeriesRow,
     FundSummary,
     RendimientoSnapshot,
     SyncResult,
@@ -84,6 +85,54 @@ class FondosService:
                 duration_seconds=duration,
                 message=f"Sync error: {err_msg}",
             )
+        finally:
+            conn.close()
+
+    def get_series_catalog(
+        self,
+        segment: Optional[str] = None,
+        category: Optional[str] = None,
+        is_debt_only: bool = False,
+        search: Optional[str] = None,
+        sort_by: str = "ticker",
+        order: str = "ASC",
+        page: int = 1,
+        limit: int = 50,
+    ) -> Tuple[List[FundSeriesRow], int]:
+        """Retrieve paginated list of all individual fund series with all columns."""
+        conn = get_sync_connection(self.db_path)
+        try:
+            repo = FondosRepository(conn)
+            raw_series, total = repo.list_all_series(
+                segment=segment,
+                category=category,
+                is_debt_only=is_debt_only,
+                search=search,
+                sort_by=sort_by,
+                order=order,
+                page=page,
+                limit=limit,
+            )
+            result = [
+                FundSeriesRow(
+                    ticker=r["ticker"],
+                    series=r["series"],
+                    segment=r["segment"],
+                    category=r["category"],
+                    minimo_inversion=r["minimo_inversion"],
+                    calificacion=r["calificacion"],
+                    rendimiento_diario=r["rendimiento_diario"],
+                    rendimiento_semanal=r["rendimiento_semanal"],
+                    rendimiento_mes=r["rendimiento_mes"],
+                    rendimiento_anio=r["rendimiento_anio"],
+                    rendimiento_1a=r["rendimiento_1a"],
+                    rendimiento_2a=r["rendimiento_2a"],
+                    precio=r["precio"],
+                    report_date=r["report_date"],
+                )
+                for r in raw_series
+            ]
+            return result, total
         finally:
             conn.close()
 

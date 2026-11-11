@@ -1,5 +1,4 @@
 # syntax=docker/dockerfile:1.4
-# Stage 1: Build & Dependencies
 FROM python:3.13-slim AS builder
 
 WORKDIR /build
@@ -11,24 +10,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# Stage 2: Runtime image
 FROM python:3.13-slim AS runtime
 
-LABEL maintainer="Ricardo M. (@ricardom)"
+LABEL maintainer="Ricardo M. (@Moztoo)"
 LABEL description="BBVA México Fondos de Inversión Scraper, Database, REST API and Dashboard"
 
 WORKDIR /app
 
-# Copy installed Python packages from builder
 COPY --from=builder /install /usr/local
 
-# Create non-root user
 RUN groupadd -g 1000 appgroup && \
     useradd -u 1000 -g appgroup -s /bin/bash -m appuser && \
     mkdir -p /app/data && \
     chown -R appuser:appgroup /app
 
-# Copy application code
 COPY --chown=appuser:appgroup app /app/app
 COPY --chown=appuser:appgroup openapi.json /app/openapi.json
 

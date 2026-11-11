@@ -135,6 +135,101 @@ class FondosRepository:
             "snapshots_inserted": snapshots_inserted,
         }
 
+    def list_all_series(
+        self,
+        segment: Optional[str] = None,
+        category: Optional[str] = None,
+        is_debt_only: bool = False,
+        search: Optional[str] = None,
+        sort_by: str = "ticker",
+        order: str = "ASC",
+        page: int = 1,
+        limit: int = 50,
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        """List all individual fund series with all columns and current snapshot."""
+        cur = self.conn.cursor()
+        where_clauses = ["1=1"]
+        params: List[Any] = []
+
+        if segment:
+            where_clauses.append("f.segment = ?")
+            params.append(segment)
+        if category:
+            where_clauses.append("f.category = ?")
+            params.append(category)
+        if is_debt_only:
+            where_clauses.append("(f.category LIKE '%Deuda%' OR f.category LIKE '%Divisas%' OR f.category LIKE '%Estrategias%') AND f.category NOT LIKE '%Renta Variable%'")
+        if search:
+            where_clauses.append("(f.ticker LIKE ? OR fs.series LIKE ?)")
+            params.extend([f"%{search}%", f"%{search}%"])
+
+        where_str = " AND ".join(where_clauses)
+
+        # Count total
+        count_sql = f"""
+            SELECT COUNT(*) as total
+            FROM fund_series fs
+            JOIN funds f ON f.id = fs.fund_id
+            WHERE {where_str}
+        """
+        cur.execute(count_sql, params)
+        total = cur.fetchone()["total"]
+
+        # Validate sorting
+        valid_sort_cols = {
+            "ticker": "f.ticker",
+            "series": "fs.series",
+            "precio": "rh.precio",
+            "rendimiento_diario": "rh.rendimiento_diario",
+            "rendimiento_semanal": "rh.rendimiento_semanal",
+            "rendimiento_mes": "rh.rendimiento_mes",
+            "rendimiento_anio": "rh.rendimiento_anio",
+            "rendimiento_1a": "rh.rendimiento_1a",
+            "rendimiento_2a": "rh.rendimiento_2a",
+            "minimo_inversion": "fs.minimo_inversion",
+            "calificacion": "fs.calificacion",
+        }
+        sort_column = valid_sort_cols.get(sort_by.lower(), "f.ticker")
+        sort_order = "DESC" if order.upper() == "DESC" else "ASC"
+
+        offset = (page - 1) * limit
+        sql = f"""
+            SELECT 
+                fs.id as series_id,
+                f.ticker,
+                fs.series,
+                f.segment,
+                f.category,
+                fs.minimo_inversion,
+                fs.calificacion,
+                rh.rendimiento_diario,
+                rh.rendimiento_semanal,
+                rh.rendimiento_mes,
+                rh.rendimiento_anio,
+                rh.rendimiento_1a,
+                rh.rendimiento_2a,
+                rh.precio,
+                rh.report_date,
+                (
+                    SELECT COUNT(*) FROM rendimientos_history rh_cnt 
+                    WHERE rh_cnt.fund_series_id = fs.id
+                ) as history_count
+            FROM fund_series fs
+            JOIN funds f ON f.id = fs.fund_id
+            LEFT JOIN rendimientos_history rh ON rh.fund_series_id = fs.id 
+                AND rh.report_date = (
+                    SELECT MAX(rh_inner.report_date) 
+                    FROM rendimientos_history rh_inner 
+                    WHERE rh_inner.fund_series_id = fs.id
+                )
+            WHERE {where_str}
+            ORDER BY {sort_column} {sort_order}, fs.series ASC
+            LIMIT ? OFFSET ?
+        """
+        cur.execute(sql, params + [limit, offset])
+        rows = [dict(r) for r in cur.fetchall()]
+        return rows, total
+
     def list_funds(
         self,
         segment: Optional[str] = None,

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ app_name }}</title>
+  <link rel="stylesheet" href="static/css/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header & Navigation -->
+    <header class="navbar">
+      <div class="brand-section">
+        <span class="brand-badge">BBVA México · App</span>
+        <h1 class="brand-title">Fondos de Inversión · Anaquel de Rendimientos</h1>
+      </div>
+      <div class="nav-actions">
+        <a href="api/v1/contract" target="_blank" class="btn btn-outline" title="Ver especificación OpenAPI">
+          Contrato API
+        </a>
+        <a href="docs" target="_blank" class="btn btn-outline" title="Swagger UI">
+          Swagger Docs
+        </a>
+        <button id="syncBtn" class="btn btn-primary">
+          Sincronizar PDF
+        </button>
+      </div>
+    </header>
+
+    <!-- KPI Metric Cards -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">Total Fondos</span>
+        <div id="kpiTotalFunds" class="kpi-value">--</div>
+        <div class="kpi-subtitle">Instrumentos catalogados</div>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Series Activas</span>
+        <div id="kpiTotalSeries" class="kpi-value">--</div>
+        <div class="kpi-subtitle">Series con precios y rendimientos</div>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Último Reporte</span>
+        <div id="kpiLastDate" class="kpi-value">--</div>
+        <div class="kpi-subtitle">Fecha del Anaquel oficial</div>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Estado de Sincronización</span>
+        <div style="font-size: 15px; font-weight: 600; color: var(--accent-primary);" id="kpiSyncStatus">--</div>
+        <div class="kpi-subtitle">Actualización automatizada</div>
+      </div>
+    </section>
+
+    <!-- Controls, Filter and Search Bar -->
+    <section class="controls-bar">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="Buscar fondo o serie (ej. BBVALIQ, B, BBVARV)...">
+      </div>
+
+      <div class="filter-group">
+        <div class="segment-pills">
+          <button class="pill-btn active" data-filter="all">Todos</button>
+          <button class="pill-btn highlight" data-filter="debt-pf" title="Filtrar todos los fondos de deuda para Personas Físicas">⭐ Deuda P. Físicas</button>
+          <button class="pill-btn" data-filter="pf">P. Físicas</button>
+          <button class="pill-btn" data-filter="pm">P. Morales</button>
+          <button class="pill-btn" data-filter="colab">Colaboradores</button>
+        </div>
+
+        <select id="categorySelect" class="select-dropdown">
+          <option value="">Todas las Categorías</option>
+        </select>
+
+        <select id="sortSelect" class="select-dropdown">
+          <option value="ticker:ASC">Ordenar: Ticker (A-Z)</option>
+          <option value="rendimiento_1a:DESC">Mayor Rendimiento 1A</option>
+          <option value="rendimiento_diario:DESC">Mayor Rendimiento Diario</option>
+          <option value="precio:DESC">Mayor Precio</option>
+          <option value="minimo_inversion:ASC">Menor Mínimo de Inv.</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Full Anaquel Table with ALL Columns -->
+    <section class="table-card">
+      <div class="table-header-info">
+        <span id="tableTitle" style="font-weight: 600; font-size: 14px; color: var(--text-primary);">
+          Catálogo Completo de Series y Rendimientos Históricos
+        </span>
+        <span style="font-size: 12px; color: var(--text-muted);">
+          Todas las columnas extraídas del Anaquel Oficial BBVA
+        </span>
+      </div>
+      <div class="table-wrapper">
+        <table id="seriesMainTable">
+          <thead>
+            <tr>
+              <th style="min-width: 100px;">Fondo</th>
+              <th style="min-width: 60px;">Serie</th>
+              <th style="min-width: 110px;">Segmento</th>
+              <th style="min-width: 180px;">Categoría</th>
+              <th style="min-width: 100px; text-align: right;">Mínimo Inv.</th>
+              <th style="min-width: 70px; text-align: center;">Calif.</th>
+              <th style="min-width: 75px; text-align: right;">Diario</th>
+              <th style="min-width: 75px; text-align: right;">Semanal</th>
+              <th style="min-width: 80px; text-align: right;">Acum. Mes</th>
+              <th style="min-width: 80px; text-align: right;">Acum. Año</th>
+              <th style="min-width: 75px; text-align: right;">1 Año</th>
+              <th style="min-width: 75px; text-align: right;">2 Años</th>
+              <th style="min-width: 105px; text-align: right;">Precio</th>
+              <th style="min-width: 90px; text-align: center;">Fecha</th>
+              <th style="min-width: 80px; text-align: center;">Gráfica</th>
+            </tr>
+          </thead>
+          <tbody id="seriesTableBody">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination-bar">
+        <span id="pageInfo">Cargando series...</span>
+        <div style="display: flex; gap: 8px;">
+          <button id="prevPageBtn" class="btn btn-outline" style="padding: 6px 12px;" disabled>Anterior</button>
+          <button id="nextPageBtn" class="btn btn-outline" style="padding: 6px 12px;">Siguiente</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Detail & History Modal -->
+  <div id="detailModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h2 id="modalTitle" style="font-size: 18px; font-weight: 700;">Detalle Histórico</h2>
+          <p id="modalSubtitle" style="font-size: 13px; color: var(--text-secondary);"></p>
+        </div>
+        <button id="closeModalBtn" class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Interactive Chart -->
+        <h4 style="font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px;">
+          Evolución Histórica de Precio y Rendimientos
+        </h4>
+        <div class="chart-container">
+          <canvas id="historyChartCanvas"></canvas>
+        </div>
+
+        <!-- Snapshots Table -->
+        <div class="series-table-section">
+          <h4>Registro de Snapshots Guardados en Base de Datos</h4>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th style="text-align: right;">Precio</th>
+                  <th style="text-align: right;">Diario</th>
+                  <th style="text-align: right;">Semanal</th>
+                  <th style="text-align: right;">Acum. Mes</th>
+                  <th style="text-align: right;">Acum. Año</th>
+                  <th style="text-align: right;">1 Año</th>
+                  <th style="text-align: right;">2 Años</th>
+                </tr>
+              </thead>
+              <tbody id="modalSnapshotsBody">
+                <!-- Populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast"></div>
+
+  <script src="static/js/dashboard.js"></script>
+</body>
+</html>

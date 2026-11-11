@@ -295,7 +295,7 @@ class FondosService:
             stats = repo.get_system_stats()
             return SystemHealth(
                 status="healthy",
-                version="1.0.4",
+                version="1.0.5",
                 total_funds=stats["total_funds"],
                 total_series=stats["total_series"],
                 total_snapshots=stats["total_snapshots"],

@@ -473,3 +473,385 @@ tr:hover td {
   background-color: var(--accent-danger);
   color: #fff;
 }
+
+/* ==========================================================================
+   View Mode Toggle (Cards vs Table)
+   ========================================================================== */
+.view-mode-toggle {
+  display: inline-flex;
+  gap: 2px;
+  background-color: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  padding: 3px;
+  border-radius: 8px;
+}
+
+.view-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.view-toggle-btn:hover {
+  color: var(--text-primary);
+}
+
+.view-toggle-btn.active {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* ==========================================================================
+   Mobile / Responsive Cards View
+   ========================================================================== */
+.mobile-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 16px;
+}
+
+.fund-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform 0.12s ease, border-color 0.15s ease, background-color 0.15s ease;
+  position: relative;
+}
+
+.fund-card:hover {
+  border-color: var(--border-focus);
+  background-color: #1c1c20;
+}
+
+.fund-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.fund-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fund-ticker {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.fund-card-price-group {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.fund-price {
+  font-size: 16px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: #fff;
+}
+
+.fund-date {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.fund-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.badge-calif {
+  font-size: 11px;
+  padding: 2px 7px;
+  background: rgba(14, 165, 233, 0.15);
+  color: #38bdf8;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.fund-card-yields {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  background-color: rgba(0, 0, 0, 0.35);
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.yield-pill-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border-radius: 6px;
+  padding: 3px 2px;
+}
+
+.yield-pill-card.highlight {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.yield-card-lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.yield-card-val {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.fund-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.btn-xs {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 6px;
+}
+
+/* ==========================================================================
+   Responsive Adaptations (Desktop vs Mobile)
+   ========================================================================== */
+
+/* Desktop Grid for Cards View (>= 769px) */
+@media (min-width: 769px) {
+  .mobile-cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 16px;
+    padding: 20px;
+  }
+  .desktop-only {
+    display: inline-block;
+  }
+}
+
+/* Mobile Devices (< 768px) */
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+
+  .app-container {
+    padding: 12px 10px;
+  }
+
+  /* Compact Navbar */
+  .navbar {
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    gap: 10px;
+  }
+
+  .brand-section {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .brand-title {
+    font-size: 15px;
+    letter-spacing: -0.01em;
+  }
+
+  .brand-badge {
+    font-size: 10px;
+    padding: 2px 7px;
+  }
+
+  .nav-actions {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .nav-actions .btn {
+    flex: 1;
+    text-align: center;
+    padding: 7px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  /* Optimized Compact KPI Cards (Cut vertical space by 70%) */
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .kpi-card {
+    padding: 8px 12px;
+    border-radius: 10px;
+  }
+
+  .kpi-label {
+    font-size: 10px;
+    margin-bottom: 2px;
+    letter-spacing: 0.04em;
+  }
+
+  .kpi-value {
+    font-size: 18px;
+    line-height: 1.2;
+    margin-bottom: 0;
+  }
+
+  .kpi-subtitle {
+    display: none; /* Hide verbose subtitle on small screens */
+  }
+
+  /* Controls & Horizontal Swipeable Filters */
+  .controls-bar {
+    padding: 10px 12px;
+    gap: 10px;
+    margin-bottom: 14px;
+    border-radius: 10px;
+  }
+
+  .filter-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .segment-pills {
+    display: flex;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    gap: 6px;
+  }
+
+  .segment-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pill-btn {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .select-dropdown {
+    width: 100%;
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+
+  /* Table Header Info on Mobile */
+  .table-header-info {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .table-header-titles {
+    width: 100%;
+  }
+
+  .view-mode-toggle {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .view-toggle-btn {
+    flex: 1;
+    text-align: center;
+    padding: 6px 8px;
+  }
+
+  .mobile-cards-grid {
+    padding: 10px 8px;
+    gap: 10px;
+  }
+
+  .fund-card {
+    padding: 12px 14px;
+  }
+
+  .fund-ticker {
+    font-size: 15px;
+  }
+
+  .fund-price {
+    font-size: 15px;
+  }
+
+  .yield-card-val {
+    font-size: 12px;
+  }
+
+  /* Pagination */
+  .pagination-bar {
+    padding: 10px 12px;
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+
+  /* Modal on Mobile */
+  .modal-overlay {
+    padding: 8px;
+  }
+
+  .modal-content {
+    max-height: 94vh;
+    border-radius: 12px;
+  }
+
+  .modal-header {
+    padding: 12px 16px;
+  }
+
+  .modal-body {
+    padding: 14px 12px;
+  }
+
+  .chart-container {
+    height: 220px;
+    padding: 8px;
+    margin-bottom: 16px;
+  }
+}

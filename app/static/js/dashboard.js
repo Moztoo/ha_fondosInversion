@@ -14,6 +14,7 @@ let state = {
   only_favorites: false,
   sort_by: "ticker",
   order: "ASC",
+  view_mode: window.innerWidth < 768 ? "cards" : "table",
   chartInstance: null
 };
 
@@ -22,10 +23,35 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function initDashboard() {
+  applyViewMode();
   await loadTelemetry();
   await loadFilters();
   await loadSeriesTable();
   setupEventListeners();
+}
+
+function applyViewMode() {
+  const tableView = document.getElementById("seriesTableView");
+  const cardsView = document.getElementById("seriesCardsContainer");
+  const cardsBtn = document.getElementById("viewCardsBtn");
+  const tableBtn = document.getElementById("viewTableBtn");
+
+  if (state.view_mode === "cards") {
+    if (tableView) tableView.style.display = "none";
+    if (cardsView) cardsView.style.display = "grid";
+    if (cardsBtn) cardsBtn.classList.add("active");
+    if (tableBtn) tableBtn.classList.remove("active");
+  } else {
+    if (tableView) tableView.style.display = "block";
+    if (cardsView) cardsView.style.display = "none";
+    if (tableBtn) tableBtn.classList.add("active");
+    if (cardsBtn) cardsBtn.classList.remove("active");
+  }
+}
+
+function setViewMode(mode) {
+  state.view_mode = mode;
+  applyViewMode();
 }
 
 function setupEventListeners() {
@@ -95,6 +121,16 @@ function setupEventListeners() {
     state.page = 1;
     loadSeriesTable();
   });
+
+  // View mode switcher (Cards vs Table)
+  const cardsBtn = document.getElementById("viewCardsBtn");
+  if (cardsBtn) {
+    cardsBtn.addEventListener("click", () => setViewMode("cards"));
+  }
+  const tableBtn = document.getElementById("viewTableBtn");
+  if (tableBtn) {
+    tableBtn.addEventListener("click", () => setViewMode("table"));
+  }
 
   // Sync button
   document.getElementById("syncBtn").addEventListener("click", handleSync);
@@ -195,7 +231,12 @@ function formatCurrency(val) {
 
 async function loadSeriesTable() {
   const tbody = document.getElementById("seriesTableBody");
+  const cardsContainer = document.getElementById("seriesCardsContainer");
+
   tbody.innerHTML = `<tr><td colspan="16" style="text-align: center; padding: 30px; color: var(--text-secondary);">Cargando catálogo completo de fondos...</td></tr>`;
+  if (cardsContainer) {
+    cardsContainer.innerHTML = `<div style="text-align: center; padding: 30px; color: var(--text-secondary);">Cargando catálogo de fondos...</div>`;
+  }
 
   try {
     const params = new URLSearchParams({
@@ -215,6 +256,9 @@ async function loadSeriesTable() {
 
     if (!json.success || !json.data) {
       tbody.innerHTML = `<tr><td colspan="16" style="text-align: center; color: var(--accent-danger);">Error al cargar las series de fondos</td></tr>`;
+      if (cardsContainer) {
+        cardsContainer.innerHTML = `<div style="text-align: center; color: var(--accent-danger); padding: 20px;">Error al cargar las series de fondos</div>`;
+      }
       return;
     }
 
@@ -226,13 +270,16 @@ async function loadSeriesTable() {
         ? "No tienes fondos marcados como favoritos aún. Haz clic en la estrella ★ de cualquier fondo para agregarlo."
         : "No se encontraron fondos con los filtros aplicados.";
       tbody.innerHTML = `<tr><td colspan="16" style="text-align: center; padding: 40px; color: var(--text-muted);">${emptyMsg}</td></tr>`;
+      if (cardsContainer) {
+        cardsContainer.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text-muted);">${emptyMsg}</div>`;
+      }
       return;
     }
 
     tbody.innerHTML = "";
-    json.data.forEach(item => {
-      const tr = document.createElement("tr");
+    if (cardsContainer) cardsContainer.innerHTML = "";
 
+    json.data.forEach(item => {
       const califBadge = item.calificacion 
         ? `<span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8;">${item.calificacion}</span>`
         : '<span class="text-muted" style="font-size: 11px;">N/A</span>';
@@ -241,6 +288,8 @@ async function loadSeriesTable() {
       const favChar = item.is_favorite ? "★" : "☆";
       const favTitle = item.is_favorite ? "Quitar de favoritos" : "Marcar como favorito";
 
+      // 1. Render Desktop Table Row
+      const tr = document.createElement("tr");
       tr.innerHTML = `
         <td style="text-align: center;">
           <button class="${favClass}" onclick="toggleFavorite('${item.ticker}', '${item.series}', this, event)" title="${favTitle}">${favChar}</button>
@@ -266,11 +315,75 @@ async function loadSeriesTable() {
         </td>
       `;
       tbody.appendChild(tr);
+
+      // 2. Render Mobile / Responsive Card (No horizontal scroll needed!)
+      if (cardsContainer) {
+        const card = document.createElement("div");
+        card.className = "fund-card";
+        card.onclick = (e) => {
+          if (e.target.closest(".fav-star-btn")) return;
+          openHistoricalModal(item.ticker, item.series, item.segment);
+        };
+
+        const califCardBadge = item.calificacion 
+          ? `<span class="badge-calif">${item.calificacion}</span>`
+          : '';
+
+        card.innerHTML = `
+          <div class="fund-card-header">
+            <div class="fund-card-title-group">
+              <button class="${favClass}" onclick="toggleFavorite('${item.ticker}', '${item.series}', this, event)" title="${favTitle}">${favChar}</button>
+              <span class="fund-ticker">${item.ticker}</span>
+              <span class="badge badge-series">${item.series}</span>
+              <span class="badge badge-segment">${item.segment}</span>
+            </div>
+            <div class="fund-card-price-group">
+              <span class="fund-price">${formatCurrency(item.precio)}</span>
+              <span class="fund-date">${item.report_date || "-"}</span>
+            </div>
+          </div>
+
+          <div class="fund-card-meta">
+            <span>${item.category}</span>
+            ${califCardBadge}
+          </div>
+
+          <div class="fund-card-yields">
+            <div class="yield-pill-card highlight">
+              <span class="yield-card-lbl">Mes</span>
+              <span class="yield-card-val">${formatPercent(item.rendimiento_mes)}</span>
+            </div>
+            <div class="yield-pill-card">
+              <span class="yield-card-lbl">1 Año</span>
+              <span class="yield-card-val">${formatPercent(item.rendimiento_1a)}</span>
+            </div>
+            <div class="yield-pill-card">
+              <span class="yield-card-lbl">Diario</span>
+              <span class="yield-card-val">${formatPercent(item.rendimiento_diario)}</span>
+            </div>
+            <div class="yield-pill-card">
+              <span class="yield-card-lbl">Acum Año</span>
+              <span class="yield-card-val">${formatPercent(item.rendimiento_anio)}</span>
+            </div>
+          </div>
+
+          <div class="fund-card-footer">
+            <span>Mínimo: $${(item.minimo_inversion || 0).toLocaleString()}</span>
+            <button class="btn btn-outline btn-xs" onclick="event.stopPropagation(); openHistoricalModal('${item.ticker}', '${item.series}', '${item.segment}')">
+              📈 Gráfica & Histórico
+            </button>
+          </div>
+        `;
+        cardsContainer.appendChild(card);
+      }
     });
 
   } catch (err) {
     console.error("Error loading table:", err);
     tbody.innerHTML = `<tr><td colspan="16" style="text-align: center; color: var(--accent-danger);">Error de conexión con el servicio</td></tr>`;
+    if (cardsContainer) {
+      cardsContainer.innerHTML = `<div style="text-align: center; color: var(--accent-danger); padding: 20px;">Error de conexión con el servicio</div>`;
+    }
   }
 }
 
@@ -452,6 +565,14 @@ async function toggleFavorite(ticker, series, btn, event) {
     const json = await res.json();
     if (json.success && json.data) {
       showToast(json.data.message, "success");
+      // Synchronize counterpart star buttons (card vs table)
+      document.querySelectorAll(`button[onclick*="'${ticker}', '${series}'"]`).forEach(otherBtn => {
+        if (otherBtn !== btn) {
+          otherBtn.classList.toggle("is-fav", newFav);
+          otherBtn.textContent = newFav ? "★" : "☆";
+          otherBtn.title = newFav ? "Quitar de favoritos" : "Marcar como favorito";
+        }
+      });
       // If we are currently filtering by favorites, refresh the view
       if (state.only_favorites) {
         loadSeriesTable();

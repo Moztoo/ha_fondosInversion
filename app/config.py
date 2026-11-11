@@ -20,7 +20,7 @@ if HA_OPTIONS_PATH.exists():
 class Settings:
     # Service
     APP_NAME: str = "BBVA Fondos de Inversión API & Dashboard"
-    APP_VERSION: str = "1.0.3"
+    APP_VERSION: str = "1.0.5"
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8088"))
     DEBUG: bool = os.getenv("DEBUG", "false").lower() in ("true", "1", "yes")

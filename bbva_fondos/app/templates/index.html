@@ -24,17 +24,17 @@
     <!-- Header & Navigation -->
     <header class="navbar">
       <div class="brand-section">
-        <span class="brand-badge">BBVA México · App</span>
-        <h1 class="brand-title">Fondos de Inversión · Anaquel de Rendimientos</h1>
+        <span class="brand-badge">BBVA México</span>
+        <h1 class="brand-title">Fondos de Inversión · Rendimientos</h1>
       </div>
       <div class="nav-actions">
         <button id="testNotifyBtn" class="btn btn-outline" title="Probar notificación a Home Assistant">
-          🔔 Probar Alerta HA
+          🔔 Probar Alerta
         </button>
-        <button onclick="window.open(getApiBase() + '/api/v1/contract', '_blank')" class="btn btn-outline" title="Ver especificación OpenAPI">
+        <button onclick="window.open(getApiBase() + '/api/v1/contract', '_blank')" class="btn btn-outline desktop-only" title="Ver especificación OpenAPI">
           Contrato API
         </button>
-        <button onclick="window.open(getApiBase() + '/docs', '_blank')" class="btn btn-outline" title="Swagger UI">
+        <button onclick="window.open(getApiBase() + '/docs', '_blank')" class="btn btn-outline desktop-only" title="Swagger UI">
           Swagger Docs
         </button>
         <button id="syncBtn" class="btn btn-primary">
@@ -98,17 +98,31 @@
       </div>
     </section>
 
-    <!-- Full Anaquel Table with ALL Columns -->
+    <!-- Full Anaquel Catalog (Table on Desktop, Cards on Mobile) -->
     <section class="table-card">
       <div class="table-header-info">
-        <span id="tableTitle" style="font-weight: 600; font-size: 14px; color: var(--text-primary);">
-          Catálogo Completo de Series y Rendimientos Históricos
-        </span>
-        <span style="font-size: 12px; color: var(--text-muted);">
-          Todas las columnas extraídas del Anaquel Oficial BBVA
-        </span>
+        <div class="table-header-titles">
+          <span id="tableTitle" style="font-weight: 600; font-size: 14px; color: var(--text-primary);">
+            Catálogo de Series y Rendimientos
+          </span>
+          <span class="desktop-only" style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">
+            Todas las columnas extraídas del Anaquel Oficial BBVA
+          </span>
+        </div>
+
+        <!-- View Switcher (Cards vs Table) -->
+        <div class="view-mode-toggle" id="viewModeToggle">
+          <button id="viewCardsBtn" class="view-toggle-btn active" type="button" title="Vista Móvil en Tarjetas (sin scroll horizontal)">
+            📱 Tarjetas
+          </button>
+          <button id="viewTableBtn" class="view-toggle-btn" type="button" title="Vista Tabla Completa (14 columnas)">
+            📊 Tabla
+          </button>
+        </div>
       </div>
-      <div class="table-wrapper">
+
+      <!-- Desktop / Full Table View -->
+      <div id="seriesTableView" class="table-wrapper" style="display: none;">
         <table id="seriesMainTable">
           <thead>
             <tr>
@@ -134,6 +148,11 @@
             <!-- Populated via JS -->
           </tbody>
         </table>
+      </div>
+
+      <!-- Mobile / Responsive Cards View (No horizontal scroll needed) -->
+      <div id="seriesCardsContainer" class="mobile-cards-grid">
+        <!-- Populated via JS -->
       </div>
 
       <!-- Pagination -->

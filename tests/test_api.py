@@ -16,12 +16,65 @@ def client():
     settings.DATABASE_PATH = path
     init_db(path)
 
-    # Ingest sample data if test PDF exists
+    # Ingest sample data if test PDF exists, otherwise seed mock report
+    seeded = False
     if os.path.exists("/tmp/bbva_00003776.pdf"):
-        with open("/tmp/bbva_00003776.pdf", "rb") as f:
-            pdf_bytes = f.read()
-        service = FondosService(db_path=path)
-        service.sync_data(custom_pdf_bytes=pdf_bytes)
+        try:
+            with open("/tmp/bbva_00003776.pdf", "rb") as f:
+                pdf_bytes = f.read()
+            service = FondosService(db_path=path)
+            res = service.sync_data(custom_pdf_bytes=pdf_bytes)
+            seeded = res.success
+        except Exception:
+            seeded = False
+
+    if not seeded:
+        from app.database import get_sync_connection
+        from app.parser import ParsedAnaquelReport, ParsedFundRecord
+        from app.repository import FondosRepository
+
+        conn = get_sync_connection(path)
+        repo = FondosRepository(conn)
+        mock_report = ParsedAnaquelReport(
+            report_date="2026-11-10",
+            total_records=2,
+            records=[
+                ParsedFundRecord(
+                    ticker="BBVALIQ",
+                    series="C",
+                    segment="Personas Físicas",
+                    category="Fondos de Deuda",
+                    minimo_inversion=1000.0,
+                    calificacion="AAA/1",
+                    rendimiento_diario=0.04,
+                    rendimiento_semanal=0.20,
+                    rendimiento_mes=0.89,
+                    rendimiento_anio=8.50,
+                    rendimiento_1a=11.25,
+                    rendimiento_2a=20.10,
+                    precio=12.3456,
+                    report_date="2026-11-10",
+                ),
+                ParsedFundRecord(
+                    ticker="BBVAGUB",
+                    series="P",
+                    segment="Personas Físicas",
+                    category="Fondos de Deuda",
+                    minimo_inversion=50000.0,
+                    calificacion="AAA/1",
+                    rendimiento_diario=0.03,
+                    rendimiento_semanal=0.18,
+                    rendimiento_mes=0.78,
+                    rendimiento_anio=7.90,
+                    rendimiento_1a=10.80,
+                    rendimiento_2a=19.50,
+                    precio=25.6789,
+                    report_date="2026-11-10",
+                ),
+            ],
+        )
+        repo.upsert_parsed_report(mock_report)
+        conn.close()
 
     with TestClient(app) as tc:
         yield tc

@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 class Settings:
     # Service
     APP_NAME: str = "BBVA Fondos de Inversión API & Dashboard"
-    APP_VERSION: str = "1.0.0"
+    APP_VERSION: str = "1.0.1"
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8088"))
     DEBUG: bool = os.getenv("DEBUG", "false").lower() in ("true", "1", "yes")

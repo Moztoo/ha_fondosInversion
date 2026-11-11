@@ -102,9 +102,9 @@ app.include_router(api_router)
 async def dashboard_view(request: Request):
     """Serve the interactive web dashboard."""
     return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
+        request=request,
+        name="index.html",
+        context={
             "app_name": settings.APP_NAME,
             "version": settings.APP_VERSION,
         },

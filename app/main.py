@@ -98,15 +98,28 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 # Mount API
 app.include_router(api_router)
 
+def get_static_asset(rel_path: str) -> str:
+    asset_file = BASE_DIR / "static" / rel_path
+    if asset_file.exists():
+        return asset_file.read_text(encoding="utf-8")
+    return ""
+
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def dashboard_view(request: Request):
     """Serve the interactive web dashboard."""
+    root_path = request.scope.get("root_path", "")
+    css_content = get_static_asset("css/dashboard.css")
+    js_content = get_static_asset("js/dashboard.js")
+    
     return templates.TemplateResponse(
         request=request,
         name="index.html",
         context={
             "app_name": settings.APP_NAME,
             "version": settings.APP_VERSION,
+            "root_path": root_path,
+            "css_content": css_content,
+            "js_content": js_content,
         },
     )
 

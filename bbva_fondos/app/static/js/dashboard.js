@@ -116,9 +116,21 @@ function setupEventListeners() {
   });
 }
 
+function getApiBase() {
+  const path = window.location.pathname;
+  const match = path.match(/^(\/api\/hassio_ingress\/[^\/]+)/);
+  if (match) {
+    return match[1];
+  }
+  if (window.INGRESS_ROOT) {
+    return window.INGRESS_ROOT.replace(/\/$/, "");
+  }
+  return "";
+}
+
 async function loadTelemetry() {
   try {
-    const res = await fetch("api/v1/health");
+    const res = await fetch(`${getApiBase()}/api/v1/health`);
     const json = await res.json();
     if (json.success && json.data) {
       const d = json.data;
@@ -134,7 +146,7 @@ async function loadTelemetry() {
 
 async function loadFilters() {
   try {
-    const res = await fetch("api/v1/filters");
+    const res = await fetch(`${getApiBase()}/api/v1/filters`);
     const json = await res.json();
     if (json.success && json.data) {
       const select = document.getElementById("categorySelect");
@@ -179,7 +191,7 @@ async function loadSeriesTable() {
     if (state.segment) params.append("segment", state.segment);
     if (state.category) params.append("category", state.category);
 
-    const res = await fetch(`api/v1/series?${params.toString()}`);
+    const res = await fetch(`${getApiBase()}/api/v1/series?${params.toString()}`);
     const json = await res.json();
 
     if (!json.success || !json.data) {
@@ -246,7 +258,7 @@ async function handleSync() {
   btn.textContent = "Sincronizando PDF...";
 
   try {
-    const res = await fetch("api/v1/sync", { method: "POST" });
+    const res = await fetch(`${getApiBase()}/api/v1/sync`, { method: "POST" });
     const json = await res.json();
     if (json.success) {
       showToast(json.data.message || "Sincronización completada con éxito.", "success");
@@ -272,7 +284,7 @@ async function openHistoricalModal(ticker, series, segment) {
   modal.classList.add("open");
 
   try {
-    const res = await fetch(`api/v1/funds/${ticker}/${series}/history?segment=${encodeURIComponent(segment)}`);
+    const res = await fetch(`${getApiBase()}/api/v1/funds/${ticker}/${series}/history?segment=${encodeURIComponent(segment)}`);
     const json = await res.json();
 
     const history = json.data || [];

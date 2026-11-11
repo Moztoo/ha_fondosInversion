@@ -1,7 +1,7 @@
 name: "BBVA Fondos de Inversión"
 slug: "bbva_fondos"
 description: "App para extraer, almacenar en base de datos y graficar rendimientos del Anaquel oficial de BBVA México"
-version: "1.0.1"
+version: "1.0.2"
 url: "https://github.com/Moztoo/ha_fondosInversion"
 arch:
   - aarch64

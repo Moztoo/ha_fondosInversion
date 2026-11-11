@@ -4,8 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ app_name }}</title>
-  <link rel="stylesheet" href="static/css/dashboard.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  
+  <!-- Inlined UI/UX Stylesheet (Immune to Ingress Path Rewriting) -->
+  <style>
+    {{ css_content | safe }}
+  </style>
+
+  <!-- Local Chart.js with CDN Fallback -->
+  <script src="{{ root_path }}/static/js/chart.umd.min.js"></script>
+  <script>
+    if (typeof Chart === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"><\/script>');
+    }
+    window.INGRESS_ROOT = "{{ root_path }}";
+  </script>
 </head>
 <body>
   <div class="app-container">
@@ -16,12 +28,12 @@
         <h1 class="brand-title">Fondos de Inversión · Anaquel de Rendimientos</h1>
       </div>
       <div class="nav-actions">
-        <a href="api/v1/contract" target="_blank" class="btn btn-outline" title="Ver especificación OpenAPI">
+        <button onclick="window.open(getApiBase() + '/api/v1/contract', '_blank')" class="btn btn-outline" title="Ver especificación OpenAPI">
           Contrato API
-        </a>
-        <a href="docs" target="_blank" class="btn btn-outline" title="Swagger UI">
+        </button>
+        <button onclick="window.open(getApiBase() + '/docs', '_blank')" class="btn btn-outline" title="Swagger UI">
           Swagger Docs
-        </a>
+        </button>
         <button id="syncBtn" class="btn btn-primary">
           Sincronizar PDF
         </button>
@@ -180,6 +192,9 @@
   <!-- Toast Notification -->
   <div id="toast" class="toast"></div>
 
-  <script src="static/js/dashboard.js"></script>
+  <!-- Inlined Application Script -->
+  <script>
+    {{ js_content | safe }}
+  </script>
 </body>
 </html>

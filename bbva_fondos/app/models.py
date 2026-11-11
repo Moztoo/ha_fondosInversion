@@ -43,6 +43,7 @@ class FundSeriesRow(BaseModel):
     rendimiento_2a: Optional[float] = Field(None, description="2-year annualized yield percentage")
     precio: float = Field(..., description="Share price")
     report_date: Optional[str] = Field(None, description="Report date YYYY-MM-DD")
+    is_favorite: bool = Field(False, description="Whether this fund series is marked as favorite")
 
 class FundSeriesDetail(BaseModel):
     """Detailed series metrics including latest snapshot and metadata."""
@@ -55,6 +56,7 @@ class FundSeriesDetail(BaseModel):
     category: str = Field(..., description="Fund category: Fondos de Deuda, Renta Variable, etc.")
     minimo_inversion: float = Field(0.0, description="Minimum investment amount in currency")
     calificacion: Optional[str] = Field(None, description="Credit / Risk rating (e.g. AAA/1, AA/2)")
+    is_favorite: bool = Field(False, description="Whether this fund series is marked as favorite")
     latest_snapshot: Optional[RendimientoSnapshot] = Field(None, description="Latest available yields and price")
     history_count: int = Field(0, description="Total historical snapshots recorded")
 
@@ -101,6 +103,21 @@ class SystemHealth(BaseModel):
     last_sync_time: Optional[str]
     auto_sync_time: Optional[str] = "22:00"
     auto_sync_enabled: bool = True
+
+class ToggleFavoriteResponse(BaseModel):
+    """Response payload when toggling favorite status of a series."""
+    ticker: str
+    series: str
+    is_favorite: bool
+    message: str
+
+class NotificationTestResponse(BaseModel):
+    """Result of dispatching a test push notification to Home Assistant."""
+    sent: bool
+    event_fired: bool
+    device: str
+    favorites_count: int
+    summary: str
 
 # ---------------------------------------------------------------------------
 # Standard Envelopes (Clean Architecture)

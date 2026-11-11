@@ -28,6 +28,9 @@
         <h1 class="brand-title">Fondos de Inversión · Anaquel de Rendimientos</h1>
       </div>
       <div class="nav-actions">
+        <button id="testNotifyBtn" class="btn btn-outline" title="Probar notificación a Home Assistant">
+          🔔 Probar Alerta HA
+        </button>
         <button onclick="window.open(getApiBase() + '/api/v1/contract', '_blank')" class="btn btn-outline" title="Ver especificación OpenAPI">
           Contrato API
         </button>
@@ -74,6 +77,7 @@
       <div class="filter-group">
         <div class="segment-pills">
           <button class="pill-btn active" data-filter="all">Todos</button>
+          <button class="pill-btn favorite-pill" data-filter="favorites" title="Ver únicamente fondos marcados como favoritos">★ Favoritos</button>
           <button class="pill-btn highlight" data-filter="debt-pf" title="Filtrar todos los fondos de deuda para Personas Físicas">⭐ Deuda P. Físicas</button>
           <button class="pill-btn" data-filter="pf">P. Físicas</button>
           <button class="pill-btn" data-filter="pm">P. Morales</button>
@@ -108,6 +112,7 @@
         <table id="seriesMainTable">
           <thead>
             <tr>
+              <th style="width: 45px; text-align: center;" title="Marcar como favorito">★</th>
               <th style="min-width: 100px;">Fondo</th>
               <th style="min-width: 60px;">Serie</th>
               <th style="min-width: 110px;">Segmento</th>

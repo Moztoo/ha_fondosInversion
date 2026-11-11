@@ -16,6 +16,7 @@ from app.models import (
 from app.parser import AnaquelParser
 from app.repository import FondosRepository
 from app.scraper import BBVAScraper
+from app.ha_client import HomeAssistantClient
 
 logger = logging.getLogger("bbva_fondos.service")
 
@@ -26,6 +27,7 @@ class FondosService:
         self.db_path = db_path
         self.scraper = BBVAScraper()
         self.parser = AnaquelParser()
+        self.ha_client = HomeAssistantClient()
 
     def sync_data(self, custom_pdf_bytes: Optional[bytes] = None) -> SyncResult:
         """Download (or accept) PDF, parse records, and persist to database."""
@@ -59,6 +61,12 @@ class FondosService:
                 f"({stats['funds_upserted']} funds added, {stats['snapshots_inserted']} snapshots saved) in {duration}s"
             )
             logger.info(msg)
+
+            # Dispatch notification & signal to Home Assistant for favorite funds
+            try:
+                self.dispatch_favorites_notification(report_date=report.report_date)
+            except Exception as notify_err:
+                logger.warning("Failed to dispatch favorites notification: %s", notify_err)
 
             return SyncResult(
                 success=True,
@@ -94,6 +102,7 @@ class FondosService:
         segment: Optional[str] = None,
         category: Optional[str] = None,
         is_debt_only: bool = False,
+        only_favorites: bool = False,
         search: Optional[str] = None,
         sort_by: str = "ticker",
         order: str = "ASC",
@@ -108,6 +117,7 @@ class FondosService:
                 segment=segment,
                 category=category,
                 is_debt_only=is_debt_only,
+                only_favorites=only_favorites,
                 search=search,
                 sort_by=sort_by,
                 order=order,
@@ -130,6 +140,7 @@ class FondosService:
                     rendimiento_2a=r["rendimiento_2a"],
                     precio=r["precio"],
                     report_date=r["report_date"],
+                    is_favorite=bool(r.get("is_favorite", False)),
                 )
                 for r in raw_series
             ]
@@ -225,6 +236,57 @@ class FondosService:
         finally:
             conn.close()
 
+    def toggle_favorite(self, ticker: str, series: str) -> Optional[bool]:
+        """Toggle favorite state of a fund series."""
+        conn = get_sync_connection(self.db_path)
+        try:
+            repo = FondosRepository(conn)
+            return repo.toggle_favorite(ticker=ticker, series=series)
+        finally:
+            conn.close()
+
+    def get_favorites(self) -> List[Dict[str, Any]]:
+        """Retrieve list of favorite fund series with current yields."""
+        conn = get_sync_connection(self.db_path)
+        try:
+            repo = FondosRepository(conn)
+            return repo.get_favorites()
+        finally:
+            conn.close()
+
+    def dispatch_favorites_notification(
+        self, report_date: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Extract favorites and send push notification and signal to Home Assistant."""
+        favorites = self.get_favorites()
+        return self.ha_client.notify_favorites_update(
+            favorites=favorites, report_date=report_date
+        )
+
+    def test_notification(self) -> Dict[str, Any]:
+        """Send a test push notification to Home Assistant device to verify setup."""
+        favorites = self.get_favorites()
+        if not favorites:
+            # Create a sample test payload so user can test the push alert immediately
+            sample_fav = [
+                {
+                    "ticker": "BBVALIQ",
+                    "series": "C",
+                    "fund_name": "Fondo BBVALIQ",
+                    "category": "Fondos de Deuda",
+                    "segment": "Personas Físicas",
+                    "rendimiento_mes": 0.89,
+                    "precio": 12.3456,
+                    "report_date": "Prueba",
+                }
+            ]
+            return self.ha_client.notify_favorites_update(
+                favorites=sample_fav, report_date="Notificación de Prueba"
+            )
+        return self.ha_client.notify_favorites_update(
+            favorites=favorites, report_date="Prueba Manual"
+        )
+
     def get_health(self) -> SystemHealth:
         """Retrieve system telemetry and record counts."""
         conn = get_sync_connection(self.db_path)
@@ -233,7 +295,7 @@ class FondosService:
             stats = repo.get_system_stats()
             return SystemHealth(
                 status="healthy",
-                version="1.0.3",
+                version="1.0.4",
                 total_funds=stats["total_funds"],
                 total_series=stats["total_series"],
                 total_snapshots=stats["total_snapshots"],

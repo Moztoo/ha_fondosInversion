@@ -11,6 +11,7 @@ let state = {
   segment: "",
   category: "",
   is_debt_only: false,
+  only_favorites: false,
   sort_by: "ticker",
   order: "ASC",
   chartInstance: null
@@ -46,21 +47,30 @@ function setupEventListeners() {
       btn.classList.add("active");
 
       const filterType = btn.dataset.filter;
-      if (filterType === "debt-pf") {
+      if (filterType === "favorites") {
+        state.only_favorites = true;
+        state.segment = "";
+        state.is_debt_only = false;
+      } else if (filterType === "debt-pf") {
+        state.only_favorites = false;
         state.segment = "Personas Físicas";
         state.is_debt_only = true;
         document.getElementById("categorySelect").value = "";
         state.category = "";
       } else if (filterType === "pf") {
+        state.only_favorites = false;
         state.segment = "Personas Físicas";
         state.is_debt_only = false;
       } else if (filterType === "pm") {
+        state.only_favorites = false;
         state.segment = "Personas Morales";
         state.is_debt_only = false;
       } else if (filterType === "colab") {
+        state.only_favorites = false;
         state.segment = "Colaboradores BBVA";
         state.is_debt_only = false;
       } else {
+        state.only_favorites = false;
         state.segment = "";
         state.is_debt_only = false;
       }
@@ -88,6 +98,12 @@ function setupEventListeners() {
 
   // Sync button
   document.getElementById("syncBtn").addEventListener("click", handleSync);
+
+  // Test Notification button
+  const testBtn = document.getElementById("testNotifyBtn");
+  if (testBtn) {
+    testBtn.addEventListener("click", handleTestNotification);
+  }
 
   // Pagination buttons
   document.getElementById("prevPageBtn").addEventListener("click", () => {
@@ -179,7 +195,7 @@ function formatCurrency(val) {
 
 async function loadSeriesTable() {
   const tbody = document.getElementById("seriesTableBody");
-  tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 30px; color: var(--text-secondary);">Cargando catálogo completo de fondos...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="16" style="text-align: center; padding: 30px; color: var(--text-secondary);">Cargando catálogo completo de fondos...</td></tr>`;
 
   try {
     const params = new URLSearchParams({
@@ -187,7 +203,8 @@ async function loadSeriesTable() {
       limit: state.limit,
       sort_by: state.sort_by,
       order: state.order,
-      is_debt_only: state.is_debt_only ? "true" : "false"
+      is_debt_only: state.is_debt_only ? "true" : "false",
+      only_favorites: state.only_favorites ? "true" : "false"
     });
     if (state.search) params.append("search", state.search);
     if (state.segment) params.append("segment", state.segment);
@@ -197,7 +214,7 @@ async function loadSeriesTable() {
     const json = await res.json();
 
     if (!json.success || !json.data) {
-      tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; color: var(--accent-danger);">Error al cargar las series de fondos</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="16" style="text-align: center; color: var(--accent-danger);">Error al cargar las series de fondos</td></tr>`;
       return;
     }
 
@@ -205,7 +222,10 @@ async function loadSeriesTable() {
     updatePaginationUI();
 
     if (json.data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 40px; color: var(--text-muted);">No se encontraron fondos con los filtros aplicados.</td></tr>`;
+      const emptyMsg = state.only_favorites 
+        ? "No tienes fondos marcados como favoritos aún. Haz clic en la estrella ★ de cualquier fondo para agregarlo."
+        : "No se encontraron fondos con los filtros aplicados.";
+      tbody.innerHTML = `<tr><td colspan="16" style="text-align: center; padding: 40px; color: var(--text-muted);">${emptyMsg}</td></tr>`;
       return;
     }
 
@@ -217,7 +237,14 @@ async function loadSeriesTable() {
         ? `<span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8;">${item.calificacion}</span>`
         : '<span class="text-muted" style="font-size: 11px;">N/A</span>';
 
+      const favClass = item.is_favorite ? "fav-star-btn is-fav" : "fav-star-btn";
+      const favChar = item.is_favorite ? "★" : "☆";
+      const favTitle = item.is_favorite ? "Quitar de favoritos" : "Marcar como favorito";
+
       tr.innerHTML = `
+        <td style="text-align: center;">
+          <button class="${favClass}" onclick="toggleFavorite('${item.ticker}', '${item.series}', this, event)" title="${favTitle}">${favChar}</button>
+        </td>
         <td style="font-weight: 700; color: #fff;">${item.ticker}</td>
         <td><span class="badge badge-series">${item.series}</span></td>
         <td><span class="badge badge-segment">${item.segment}</span></td>
@@ -243,7 +270,7 @@ async function loadSeriesTable() {
 
   } catch (err) {
     console.error("Error loading table:", err);
-    tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; color: var(--accent-danger);">Error de conexión con el servicio</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="16" style="text-align: center; color: var(--accent-danger);">Error de conexión con el servicio</td></tr>`;
   }
 }
 
@@ -406,4 +433,70 @@ function showToast(message, type = "success") {
   setTimeout(() => {
     toast.style.display = "none";
   }, 4000);
+}
+
+async function toggleFavorite(ticker, series, btn, event) {
+  if (event) event.stopPropagation();
+
+  // Optimistic UI toggle
+  const wasFav = btn.classList.contains("is-fav");
+  const newFav = !wasFav;
+  btn.classList.toggle("is-fav", newFav);
+  btn.textContent = newFav ? "★" : "☆";
+  btn.title = newFav ? "Quitar de favoritos" : "Marcar como favorito";
+
+  try {
+    const res = await fetch(`${getApiBase()}/api/v1/favorites/${encodeURIComponent(ticker)}/${encodeURIComponent(series)}/toggle`, {
+      method: "POST"
+    });
+    const json = await res.json();
+    if (json.success && json.data) {
+      showToast(json.data.message, "success");
+      // If we are currently filtering by favorites, refresh the view
+      if (state.only_favorites) {
+        loadSeriesTable();
+      }
+    } else {
+      // Revert optimistic state
+      btn.classList.toggle("is-fav", wasFav);
+      btn.textContent = wasFav ? "★" : "☆";
+      showToast(json.error?.message || "No se pudo actualizar favorito", "error");
+    }
+  } catch (err) {
+    console.error("Error toggling favorite:", err);
+    btn.classList.toggle("is-fav", wasFav);
+    btn.textContent = wasFav ? "★" : "☆";
+    showToast("Error de conexión al marcar favorito", "error");
+  }
+}
+
+async function handleTestNotification() {
+  const btn = document.getElementById("testNotifyBtn");
+  if (!btn) return;
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "🔔 Enviando alerta...";
+
+  try {
+    const res = await fetch(`${getApiBase()}/api/v1/notifications/test`, {
+      method: "POST"
+    });
+    const json = await res.json();
+    if (json.success && json.data) {
+      const d = json.data;
+      if (d.sent) {
+        showToast(`✅ Alerta enviada a ${d.device} (${d.favorites_count} favoritos)`, "success");
+      } else {
+        showToast(`⚠️ Home Assistant: ${d.device || 'Sin dispositivo'} (Evento emitido: ${d.event_fired})`, "error");
+      }
+    } else {
+      showToast("Error al invocar servicio de notificación", "error");
+    }
+  } catch (err) {
+    console.error("Error testing notification:", err);
+    showToast("Error de comunicación con Home Assistant", "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
 }

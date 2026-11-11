@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS fund_series (
     series TEXT NOT NULL,
     minimo_inversion REAL NOT NULL DEFAULT 0,
     calificacion TEXT,
+    is_favorite INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY(fund_id) REFERENCES funds(id) ON DELETE CASCADE,
@@ -95,8 +96,20 @@ def init_db(db_path: str | None = None) -> None:
             stmt = line.strip()
             if stmt:
                 conn.execute(stmt)
+
+        # Migration check: Ensure is_favorite column exists if table already existed
+        try:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(fund_series)")
+            cols = [row["name"] for row in cursor.fetchall()]
+            if cols and "is_favorite" not in cols:
+                conn.execute("ALTER TABLE fund_series ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0")
+        except Exception:
+            pass
+
         # Execute schema
         conn.executescript(SCHEMA_DDL)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_fund_series_fav ON fund_series(is_favorite)")
         conn.commit()
 
 def get_sync_connection(db_path: str | None = None) -> sqlite3.Connection:

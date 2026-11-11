@@ -108,6 +108,18 @@
             "description": "Filter only debt and liquidity funds"
           },
           {
+            "name": "only_favorites",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Filter only favorited series",
+              "default": false,
+              "title": "Only Favorites"
+            },
+            "description": "Filter only favorited series"
+          },
+          {
             "name": "search",
             "in": "query",
             "required": false,
@@ -567,6 +579,102 @@
         }
       }
     },
+    "/api/v1/favorites/{ticker}/{series}/toggle": {
+      "post": {
+        "tags": [
+          "BBVA Fondos"
+        ],
+        "summary": "Toggle Fund Series Favorite Status",
+        "description": "Mark or unmark a specific fund series as favorite.",
+        "operationId": "toggle_favorite_api_v1_favorites__ticker___series__toggle_post",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "series",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Series"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse_ToggleFavoriteResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/favorites": {
+      "get": {
+        "tags": [
+          "BBVA Fondos"
+        ],
+        "summary": "List Favorite Funds",
+        "description": "Retrieve all fund series currently marked as favorites with their latest performance.",
+        "operationId": "get_favorites_api_v1_favorites_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse_List_dict__"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/test": {
+      "post": {
+        "tags": [
+          "BBVA Fondos"
+        ],
+        "summary": "Test Push Notification & Home Assistant Signal",
+        "description": "Send a test notification to Home Assistant to verify device connectivity.",
+        "operationId": "test_notification_api_v1_notifications_test_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse_NotificationTestResponse_"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/sync": {
       "post": {
         "tags": [
@@ -636,6 +744,12 @@
             ],
             "title": "Calificacion",
             "description": "Credit / Risk rating (e.g. AAA/1, AA/2)"
+          },
+          "is_favorite": {
+            "type": "boolean",
+            "title": "Is Favorite",
+            "description": "Whether this fund series is marked as favorite",
+            "default": false
           },
           "latest_snapshot": {
             "anyOf": [
@@ -795,6 +909,12 @@
             ],
             "title": "Report Date",
             "description": "Report date YYYY-MM-DD"
+          },
+          "is_favorite": {
+            "type": "boolean",
+            "title": "Is Favorite",
+            "description": "Whether this fund series is marked as favorite",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -905,6 +1025,40 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "NotificationTestResponse": {
+        "properties": {
+          "sent": {
+            "type": "boolean",
+            "title": "Sent"
+          },
+          "event_fired": {
+            "type": "boolean",
+            "title": "Event Fired"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device"
+          },
+          "favorites_count": {
+            "type": "integer",
+            "title": "Favorites Count"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sent",
+          "event_fired",
+          "device",
+          "favorites_count",
+          "summary"
+        ],
+        "title": "NotificationTestResponse",
+        "description": "Result of dispatching a test push notification to Home Assistant."
       },
       "RendimientoSnapshot": {
         "properties": {
@@ -1203,6 +1357,65 @@
         ],
         "title": "StandardResponse[List[RendimientoSnapshot]]"
       },
+      "StandardResponse_List_dict__": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "StandardResponse[List[dict]]"
+      },
+      "StandardResponse_NotificationTestResponse_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/NotificationTestResponse"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "StandardResponse[NotificationTestResponse]"
+      },
       "StandardResponse_SyncResult_": {
         "properties": {
           "success": {
@@ -1256,6 +1469,33 @@
           "data"
         ],
         "title": "StandardResponse[SystemHealth]"
+      },
+      "StandardResponse_ToggleFavoriteResponse_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/ToggleFavoriteResponse"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "StandardResponse[ToggleFavoriteResponse]"
       },
       "StandardResponse_dict_": {
         "properties": {
@@ -1417,6 +1657,35 @@
         ],
         "title": "SystemHealth",
         "description": "Health check payload for monitoring."
+      },
+      "ToggleFavoriteResponse": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "series": {
+            "type": "string",
+            "title": "Series"
+          },
+          "is_favorite": {
+            "type": "boolean",
+            "title": "Is Favorite"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticker",
+          "series",
+          "is_favorite",
+          "message"
+        ],
+        "title": "ToggleFavoriteResponse",
+        "description": "Response payload when toggling favorite status of a series."
       },
       "ValidationError": {
         "properties": {

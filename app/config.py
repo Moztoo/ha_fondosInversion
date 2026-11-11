@@ -59,4 +59,19 @@ class Settings:
         os.getenv("AUTO_SYNC_ON_STARTUP", "true").lower() in ("true", "1", "yes"),
     )
 
+    # Home Assistant Notifications & Signals
+    NOTIFY_DEVICE: str = HA_OPTIONS.get(
+        "notify_device",
+        os.getenv("NOTIFY_DEVICE", "mobile_app_sevastopol"),
+    )
+    SUPERVISOR_TOKEN: str = os.getenv("SUPERVISOR_TOKEN", "")
+    HA_URL: str = os.getenv(
+        "HA_URL",
+        "http://supervisor/core/api" if os.getenv("SUPERVISOR_TOKEN") else "http://192.168.1.20:8123/api",
+    )
+    HA_TOKEN: str = os.getenv(
+        "HA_TOKEN",
+        os.getenv("SUPERVISOR_TOKEN", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJmZmZjOTg4MTM1MTI0NmQ2YWI0NGJjZTIwMmVjNTJlNyIsImlhdCI6MTc4OTk1ODM1NSwiZXhwIjoyMTA1MzE4MzU1fQ.gNOGNPkFgzuhFKZOyNoI8hIp3TJWo773Yq_6Mmau3Mw"),
+    )
+
 settings = Settings()

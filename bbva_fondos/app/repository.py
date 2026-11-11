@@ -140,6 +140,7 @@ class FondosRepository:
         segment: Optional[str] = None,
         category: Optional[str] = None,
         is_debt_only: bool = False,
+        only_favorites: bool = False,
         search: Optional[str] = None,
         sort_by: str = "ticker",
         order: str = "ASC",
@@ -159,6 +160,8 @@ class FondosRepository:
             params.append(category)
         if is_debt_only:
             where_clauses.append("(f.category LIKE '%Deuda%' OR f.category LIKE '%Divisas%' OR f.category LIKE '%Estrategias%') AND f.category NOT LIKE '%Renta Variable%'")
+        if only_favorites:
+            where_clauses.append("fs.is_favorite = 1")
         if search:
             where_clauses.append("(f.ticker LIKE ? OR fs.series LIKE ?)")
             params.extend([f"%{search}%", f"%{search}%"])
@@ -202,6 +205,7 @@ class FondosRepository:
                 f.category,
                 fs.minimo_inversion,
                 fs.calificacion,
+                fs.is_favorite,
                 rh.rendimiento_diario,
                 rh.rendimiento_semanal,
                 rh.rendimiento_mes,
@@ -227,7 +231,11 @@ class FondosRepository:
             LIMIT ? OFFSET ?
         """
         cur.execute(sql, params + [limit, offset])
-        rows = [dict(r) for r in cur.fetchall()]
+        rows = []
+        for r in cur.fetchall():
+            d = dict(r)
+            d["is_favorite"] = bool(d.get("is_favorite", 0))
+            rows.append(d)
         return rows, total
 
     def list_funds(
@@ -332,6 +340,7 @@ class FondosRepository:
                 f.category,
                 fs.minimo_inversion,
                 fs.calificacion,
+                fs.is_favorite,
                 (
                     SELECT COUNT(*) FROM rendimientos_history rh_cnt 
                     WHERE rh_cnt.fund_series_id = fs.id
@@ -374,11 +383,78 @@ class FondosRepository:
                 "category": r["category"],
                 "minimo_inversion": r["minimo_inversion"],
                 "calificacion": r["calificacion"],
+                "is_favorite": bool(r["is_favorite"]),
                 "history_count": r["history_count"],
                 "latest_snapshot": latest_dict,
             })
 
         return result
+
+    def toggle_favorite(self, ticker: str, series: str) -> Optional[bool]:
+        """Toggle favorite state of a fund series. Returns new is_favorite boolean or None if not found."""
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            SELECT fs.id, fs.is_favorite
+            FROM fund_series fs
+            JOIN funds f ON f.id = fs.fund_id
+            WHERE UPPER(f.ticker) = UPPER(?) AND UPPER(fs.series) = UPPER(?)
+            LIMIT 1
+            """,
+            (ticker, series),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+
+        current_val = row["is_favorite"] or 0
+        new_val = 0 if current_val == 1 else 1
+        cur.execute(
+            """
+            UPDATE fund_series
+            SET is_favorite = ?, updated_at = datetime('now')
+            WHERE id = ?
+            """,
+            (new_val, row["id"]),
+        )
+        self.conn.commit()
+        return bool(new_val)
+
+    def get_favorites(self) -> List[Dict[str, Any]]:
+        """Retrieve all favorited series with their latest returns and prices."""
+        cur = self.conn.cursor()
+        sql = """
+            SELECT 
+                fs.id as series_id,
+                f.ticker,
+                f.name as fund_name,
+                fs.series,
+                f.segment,
+                f.category,
+                fs.minimo_inversion,
+                fs.calificacion,
+                rh.rendimiento_diario,
+                rh.rendimiento_semanal,
+                rh.rendimiento_mes,
+                rh.rendimiento_anio,
+                rh.rendimiento_1a,
+                rh.rendimiento_2a,
+                rh.precio,
+                rh.report_date
+            FROM fund_series fs
+            JOIN funds f ON f.id = fs.fund_id
+            LEFT JOIN rendimientos_history rh ON rh.fund_series_id = fs.id 
+                AND rh.report_date = (
+                    SELECT MAX(rh_inner.report_date) 
+                    FROM rendimientos_history rh_inner 
+                    WHERE rh_inner.fund_series_id = fs.id
+                )
+            WHERE fs.is_favorite = 1
+            ORDER BY f.ticker ASC, fs.series ASC
+        """
+        cur.execute(sql)
+        rows = [dict(r) for r in cur.fetchall()]
+        return rows
 
     def get_series_history(
         self,

@@ -10,12 +10,14 @@ from app.models import (
     FundSeriesDetail,
     FundSeriesRow,
     FundSummary,
+    NotificationTestResponse,
     RendimientoSnapshot,
     ResponseMeta,
     StandardErrorResponse,
     StandardResponse,
     SyncResult,
     SystemHealth,
+    ToggleFavoriteResponse,
 )
 from app.service import FondosService
 
@@ -52,6 +54,7 @@ def list_series(
     segment: Optional[str] = Query(None, description="Filter by segment"),
     category: Optional[str] = Query(None, description="Filter by category"),
     is_debt_only: bool = Query(False, description="Filter only debt and liquidity funds"),
+    only_favorites: bool = Query(False, description="Filter only favorited series"),
     search: Optional[str] = Query(None, description="Search ticker or series"),
     sort_by: str = Query("ticker", description="Field to sort by (ticker, precio, rendimiento_1a, etc.)"),
     order: str = Query("ASC", description="Sort order (ASC or DESC)"),
@@ -62,6 +65,7 @@ def list_series(
         segment=segment,
         category=category,
         is_debt_only=is_debt_only,
+        only_favorites=only_favorites,
         search=search,
         sort_by=sort_by,
         order=order,
@@ -76,6 +80,7 @@ def list_series(
             "segment": segment,
             "category": category,
             "is_debt_only": is_debt_only,
+            "only_favorites": only_favorites,
             "search": search,
             "sort_by": sort_by,
             "order": order,
@@ -190,6 +195,60 @@ def get_series_history(
                 },
             )
     return StandardResponse(data=history, meta=ResponseMeta(total=len(history)))
+
+@router.post(
+    "/favorites/{ticker}/{series}/toggle",
+    response_model=StandardResponse[ToggleFavoriteResponse],
+    summary="Toggle Fund Series Favorite Status",
+    description="Mark or unmark a specific fund series as favorite.",
+)
+def toggle_favorite(ticker: str, series: str):
+    res = service.toggle_favorite(ticker=ticker, series=series)
+    if res is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "SERIES_NOT_FOUND",
+                "message": f"Fund series '{ticker.upper()} {series.upper()}' was not found.",
+            },
+        )
+    action = "marcado como favorito" if res else "removido de favoritos"
+    return StandardResponse(
+        data=ToggleFavoriteResponse(
+            ticker=ticker.upper(),
+            series=series.upper(),
+            is_favorite=res,
+            message=f"Fondo {ticker.upper()} ({series.upper()}) {action}.",
+        )
+    )
+
+@router.get(
+    "/favorites",
+    response_model=StandardResponse[List[dict]],
+    summary="List Favorite Funds",
+    description="Retrieve all fund series currently marked as favorites with their latest performance.",
+)
+def get_favorites():
+    favorites = service.get_favorites()
+    return StandardResponse(data=favorites, meta=ResponseMeta(total=len(favorites)))
+
+@router.post(
+    "/notifications/test",
+    response_model=StandardResponse[NotificationTestResponse],
+    summary="Test Push Notification & Home Assistant Signal",
+    description="Send a test notification to Home Assistant to verify device connectivity.",
+)
+def test_notification():
+    result = service.test_notification()
+    return StandardResponse(
+        data=NotificationTestResponse(
+            sent=bool(result.get("sent", False)),
+            event_fired=bool(result.get("event_fired", False)),
+            device=str(result.get("device", "")),
+            favorites_count=int(result.get("favorites_count", 0)),
+            summary=str(result.get("summary", "")),
+        )
+    )
 
 @router.post(
     "/sync",

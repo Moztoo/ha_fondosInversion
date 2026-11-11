@@ -1,0 +1,10 @@
+{
+  "domain": "bbva_fondos",
+  "name": "BBVA México Fondos de Inversión",
+  "version": "1.0.0",
+  "codeowners": ["@ricardom"],
+  "config_flow": true,
+  "documentation": "https://github.com/ricardom/ha_fondosInversion",
+  "iot_class": "cloud_polling",
+  "requirements": ["pypdf>=5.0.0", "httpx>=0.27.0"]
+}

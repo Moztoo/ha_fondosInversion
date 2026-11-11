@@ -1,0 +1,83 @@
+# Configuración de Tarjetas Lovelace para Home Assistant
+# Puedes copiar estos bloques YAML directamente en tu panel de Home Assistant.
+
+title: Fondos BBVA
+icon: mdi:finance
+views:
+  - title: Inversiones BBVA
+    path: inversiones-bbva
+    cards:
+      # 1. Cabecera con Botón de Actualización
+      - type: markdown
+        title: "BBVA México · Fondos de Inversión"
+        content: >
+          Monitoreo diario del **Anaquel con Rendimientos Históricos**.
+          
+          Utiliza el botón inferior para forzar una sincronización manual del documento PDF oficial.
+
+      - type: button
+        name: Sincronizar Anaquel BBVA Ahora
+        icon: mdi:refresh
+        tap_action:
+          action: call-service
+          service: bbva_fondos.sync
+
+      # 2. Resumen de Precios Actuales
+      - type: entities
+        title: Precios por Título (MXN)
+        show_header_toggle: false
+        entities:
+          - entity: sensor.bbva_bbvaliq_b_precio
+            name: BBVALIQ (Liquidez Serie B)
+            secondary_info: last-updated
+          - entity: sensor.bbva_bbvarv_b_precio
+            name: BBVARV (Renta Variable Serie B)
+            secondary_info: last-updated
+          - entity: sensor.bbva_bbvagub_c_precio
+            name: BBVAGUB (Gubernamental Serie C)
+            secondary_info: last-updated
+
+      # 3. Rendimientos Anuales
+      - type: entities
+        title: Rendimientos Anualizados (1 Año)
+        show_header_toggle: false
+        entities:
+          - entity: sensor.bbva_bbvaliq_b_rendimiento_1a
+            name: BBVALIQ Rendimiento 1A
+          - entity: sensor.bbva_bbvarv_b_rendimiento_1a
+            name: BBVARV Rendimiento 1A
+          - entity: sensor.bbva_bbvagub_c_rendimiento_1a
+            name: BBVAGUB Rendimiento 1A
+
+      # 4. Gráfico Histórico de Precios (Lovelace Native History Graph)
+      - type: history-graph
+        title: Histórico de Precios de Título (30 días)
+        hours_to_show: 720 # 30 días
+        refresh_interval: 3600
+        entities:
+          - entity: sensor.bbva_bbvaliq_b_precio
+            name: BBVALIQ (B)
+          - entity: sensor.bbva_bbvarv_b_precio
+            name: BBVARV (B)
+          - entity: sensor.bbva_bbvagub_c_precio
+            name: BBVAGUB (C)
+
+      # 5. Tarjeta mini-graph-card (si tienes mini-graph-card instalado por HACS)
+      - type: custom:mini-graph-card
+        name: BBVALIQ - Liquidez
+        icon: mdi:cash-multiple
+        entities:
+          - sensor.bbva_bbvaliq_b_precio
+        line_color: "#10b981"
+        line_width: 3
+        hours_to_show: 720
+        points_per_hour: 0.1
+        show:
+          extrema: true
+          average: true
+
+      # 6. Dashboard Web Embebido (Iframe)
+      - type: iframe
+        title: Dashboard Financiero Interactivo
+        url: http://localhost:8088/
+        aspect_ratio: 75%

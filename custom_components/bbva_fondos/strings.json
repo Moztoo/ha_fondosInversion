@@ -1,0 +1,28 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configurar Fondos de Inversión BBVA",
+        "description": "Configura la obtención de rendimientos del Anaquel del Día Actual de BBVA México.",
+        "data": {
+          "mode": "Modo de obtención",
+          "api_url": "URL del servicio API (si seleccionó modo REST)",
+          "tracked_funds": "Fondos a rastrear (separados por coma, ej. BBVALIQ:B, BBVARV:B)",
+          "update_interval_hours": "Intervalo de actualización (horas)"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones de BBVA Fondos",
+        "description": "Modifica los fondos monitoreados o el intervalo de actualización.",
+        "data": {
+          "tracked_funds": "Fondos a rastrear (separados por coma, ej. BBVALIQ:B, BBVARV:B)",
+          "update_interval_hours": "Intervalo de actualización (horas)"
+        }
+      }
+    }
+  }
+}

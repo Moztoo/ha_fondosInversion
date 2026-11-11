@@ -12,6 +12,7 @@ from app.api.routes import router as api_router
 from app.config import settings
 from app.database import init_db
 from app.models import ErrorPayload, StandardErrorResponse
+from app.scheduler import scheduler
 
 # Logging configuration
 logging.basicConfig(
@@ -24,10 +25,13 @@ BASE_DIR = Path(__file__).resolve().parent
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifecycle hook: initialize database schema and WAL mode on startup."""
+    """Lifecycle hook: initialize database schema and start automated scheduler."""
     logger.info("Initializing database: %s", settings.DATABASE_PATH)
     init_db()
+    # Start background auto-sync scheduler (Daily at 22:00)
+    await scheduler.start()
     yield
+    await scheduler.stop()
     logger.info("Service shutting down cleanly.")
 
 app = FastAPI(

@@ -3,7 +3,7 @@
   "info": {
     "title": "BBVA Fondos de Inversi\u00f3n API & Dashboard",
     "description": "Servicio de extracci\u00f3n, almacenamiento hist\u00f3rico y consulta de rendimientos de fondos de inversi\u00f3n BBVA M\u00e9xico ('Anaquel del D\u00eda Actual').",
-    "version": "1.0.0"
+    "version": "1.0.3"
   },
   "paths": {
     "/api/v1/health": {
@@ -1386,6 +1386,23 @@
               }
             ],
             "title": "Last Sync Time"
+          },
+          "auto_sync_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Sync Time",
+            "default": "22:00"
+          },
+          "auto_sync_enabled": {
+            "type": "boolean",
+            "title": "Auto Sync Enabled",
+            "default": true
           }
         },
         "type": "object",

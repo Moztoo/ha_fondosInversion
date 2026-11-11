@@ -137,7 +137,9 @@ async function loadTelemetry() {
       document.getElementById("kpiTotalFunds").textContent = d.total_funds.toLocaleString();
       document.getElementById("kpiTotalSeries").textContent = d.total_series.toLocaleString();
       document.getElementById("kpiLastDate").textContent = d.last_report_date || "Sin datos";
-      document.getElementById("kpiSyncStatus").textContent = d.last_sync_time ? `Sincronizado: ${d.last_sync_time}` : "Pendiente de sincronizar";
+      const syncInfo = d.auto_sync_enabled ? `Auto: ${d.auto_sync_time} hrs` : "Manual";
+      const lastSyncText = d.last_sync_time ? ` · Último: ${d.last_sync_time.split(" ")[1] || d.last_sync_time}` : "";
+      document.getElementById("kpiSyncStatus").textContent = `${syncInfo}${lastSyncText}`;
     }
   } catch (err) {
     console.error("Error loading telemetry:", err);

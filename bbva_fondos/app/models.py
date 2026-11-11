@@ -99,6 +99,8 @@ class SystemHealth(BaseModel):
     total_snapshots: int
     last_report_date: Optional[str]
     last_sync_time: Optional[str]
+    auto_sync_time: Optional[str] = "22:00"
+    auto_sync_enabled: bool = True
 
 # ---------------------------------------------------------------------------
 # Standard Envelopes (Clean Architecture)

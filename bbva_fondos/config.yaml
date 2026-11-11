@@ -1,7 +1,7 @@
 name: "BBVA Fondos de Inversión"
 slug: "bbva_fondos"
 description: "App para extraer, almacenar en base de datos y graficar rendimientos del Anaquel oficial de BBVA México"
-version: "1.0.2"
+version: "1.0.3"
 url: "https://github.com/Moztoo/ha_fondosInversion"
 arch:
   - aarch64
@@ -20,8 +20,12 @@ ports:
 ports_description:
   8088/tcp: "Puerto Web UI & API REST"
 schema:
+  auto_sync_enabled: "bool"
+  auto_sync_time: "str"
+  auto_sync_on_startup: "bool"
   segment: "list(Personas Físicas|Personas Morales|Colaboradores BBVA)"
-  sync_interval_hours: "int(1,48)"
 options:
+  auto_sync_enabled: true
+  auto_sync_time: "22:00"
+  auto_sync_on_startup: true
   segment: "Personas Físicas"
-  sync_interval_hours: 12

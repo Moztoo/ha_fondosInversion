@@ -4,6 +4,7 @@ import time
 from typing import Any, Dict, List, Optional, Tuple
 
 from app.database import get_sync_connection
+from app.config import settings
 from app.models import (
     FundSeriesDetail,
     FundSeriesRow,
@@ -232,12 +233,14 @@ class FondosService:
             stats = repo.get_system_stats()
             return SystemHealth(
                 status="healthy",
-                version="1.0.0",
+                version="1.0.3",
                 total_funds=stats["total_funds"],
                 total_series=stats["total_series"],
                 total_snapshots=stats["total_snapshots"],
                 last_report_date=stats["last_report_date"],
                 last_sync_time=stats["last_sync_time"],
+                auto_sync_time=settings.AUTO_SYNC_TIME,
+                auto_sync_enabled=settings.AUTO_SYNC_ENABLED,
             )
         finally:
             conn.close()
